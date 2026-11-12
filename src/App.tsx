@@ -4,15 +4,19 @@ import { Header } from './components/Header';
 import { TimelapseSlider } from './components/TimelapseSlider';
 import { IrelandMap } from './components/IrelandMap';
 import { ComparisonDuel } from './components/ComparisonDuel';
+import { MonthlyCumulativeMap } from './components/MonthlyCumulativeMap';
 import { ScienceExplainer } from './components/ScienceExplainer';
 import { MethodologyModal } from './components/MethodologyModal';
 import { LinkedInShareModal } from './components/LinkedInShareModal';
-import { Flame, ShieldAlert, Award, Compass, Loader2 } from 'lucide-react';
+import { Calendar, Clock, LayoutGrid, Loader2 } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [data, setData] = useState<AirData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Dashboard View Mode: 'cumulative' (30-Day Monthly Summary for LinkedIn), 'diurnal' (24-Hour Cycle), or 'both'
+  const [dashboardMode, setDashboardMode] = useState<'cumulative' | 'diurnal' | 'both'>('cumulative');
 
   // Default hour is 19 (7:00 PM UTC - The Hearth Spike)
   const [currentHour, setCurrentHour] = useState<number>(19);
@@ -89,115 +93,181 @@ export const App: React.FC = () => {
         onOpenShare={() => setIsShareOpen(true)}
       />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-6 space-y-6">
-        
-        {/* Key Metrics Highlight Ribbon */}
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          
-          <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-3 sm:p-4">
-            <span className="text-[11px] font-semibold text-slate-400 block uppercase tracking-wider">
-              Ennis Peak Inversion
-            </span>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-extrabold font-mono text-purple-400">
-                198.1
-              </span>
-              <span className="text-xs text-slate-400 font-mono">µg/m³</span>
-            </div>
-            <span className="text-[11px] text-purple-300 font-medium">
-              13.2× WHO 24h Threshold (15)
-            </span>
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-5 space-y-6">
+        {/* View Switcher Bar + Key Metrics Ribbon */}
+        <section className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/70 border border-slate-800/90 rounded-2xl p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setDashboardMode('cumulative')}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+                dashboardMode === 'cumulative'
+                  ? 'bg-gradient-to-r from-orange-500 to-fuchsia-500 text-white shadow-md shadow-fuchsia-500/20'
+                  : 'bg-slate-800/80 hover:bg-slate-800 text-slate-300 border border-slate-700'
+              }`}
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              <span>30-Day Monthly Cumulative (LinkedIn Summary)</span>
+            </button>
+
+            <button
+              onClick={() => setDashboardMode('diurnal')}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+                dashboardMode === 'diurnal'
+                  ? 'bg-orange-500 text-slate-950 shadow-md shadow-orange-500/20'
+                  : 'bg-slate-800/80 hover:bg-slate-800 text-slate-300 border border-slate-700'
+              }`}
+            >
+              <Clock className="w-3.5 h-3.5" />
+              <span>24-Hour Diurnal Cycle &amp; Station Duel</span>
+            </button>
+
+            <button
+              onClick={() => setDashboardMode('both')}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition cursor-pointer ${
+                dashboardMode === 'both'
+                  ? 'bg-slate-700 text-white border border-slate-600'
+                  : 'bg-slate-900 hover:bg-slate-800 text-slate-400 border border-slate-800'
+              }`}
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>Full Combined View</span>
+            </button>
           </div>
 
-          <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-3 sm:p-4">
-            <span className="text-[11px] font-semibold text-slate-400 block uppercase tracking-wider">
-              The Hearth Window
-            </span>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-extrabold font-mono text-orange-400">
-                19:00 - 21:00
-              </span>
-              <span className="text-xs text-slate-400 font-mono">UTC</span>
+          <div className="flex items-center gap-4 text-xs font-mono px-2">
+            <div>
+              <span className="text-slate-500">Ennis Peak: </span>
+              <strong className="text-fuchsia-400">198.1 µg/m³</strong>
             </div>
-            <span className="text-[11px] text-orange-300 font-medium">
-              100% of top annual spikes
-            </span>
-          </div>
-
-          <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-3 sm:p-4">
-            <span className="text-[11px] font-semibold text-slate-400 block uppercase tracking-wider">
-              Dublin Phoenix Park Baseline
-            </span>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-extrabold font-mono text-cyan-400">
-                9.1
-              </span>
-              <span className="text-xs text-slate-400 font-mono">µg/m³</span>
+            <span className="text-slate-700">|</span>
+            <div>
+              <span className="text-slate-500">Dublin Pk: </span>
+              <strong className="text-sky-400">9.1 µg/m³</strong>
             </div>
-            <span className="text-[11px] text-cyan-300 font-medium">
-              Smoky Coal Ban + Gas Grid
-            </span>
-          </div>
-
-          <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-3 sm:p-4">
-            <span className="text-[11px] font-semibold text-slate-400 block uppercase tracking-wider">
-              Active EPA Monitors
-            </span>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-extrabold font-mono text-emerald-400">
-                113
-              </span>
-              <span className="text-xs text-slate-400 font-mono">Stations</span>
+            <span className="text-slate-700 hidden sm:inline">|</span>
+            <div className="hidden sm:block">
+              <span className="text-slate-500">WHO Limit: </span>
+              <strong className="text-amber-400">15.0 µg/m³</strong>
             </div>
-            <span className="text-[11px] text-emerald-300 font-medium">
-              AURN National Network
-            </span>
           </div>
-
         </section>
 
-        {/* 24-Hour Scrubber & Narrative Bar */}
-        <section>
-          <TimelapseSlider
-            currentHour={currentHour}
-            onHourChange={(h) => setCurrentHour(h)}
-            isPlaying={isPlaying}
-            onTogglePlay={() => setIsPlaying(!isPlaying)}
-            playbackSpeed={playbackSpeed}
-            onSpeedToggle={() => setPlaybackSpeed(playbackSpeed === 1 ? 2 : 1)}
-          />
-        </section>
-
-        {/* Core Visualization Grid: Map + Comparison Duel */}
-        <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-          
-          {/* Left Column: Spatial Dispersion Map (5 cols) */}
-          <div className="lg:col-span-5 flex flex-col">
-            <IrelandMap
-              currentHour={currentHour}
-              hourlyPoints={hourlyPoints}
+        {/* SECTION A: 30-Day Cumulative Monthly Ireland Map Timelapse (LinkedIn Summary View) */}
+        {(dashboardMode === 'cumulative' || dashboardMode === 'both') && (
+          <section>
+            <MonthlyCumulativeMap
+              data={data}
               selectedStationCode={selectedStationCode}
               onSelectStation={(code) => setSelectedStationCode(code)}
-              targetStations={data.targetStations}
-              whoLimit={whoLimit}
             />
+          </section>
+        )}
+
+        {/* SECTION B: 24-Hour Diurnal Cycle & Head-to-Head Duel */}
+        {(dashboardMode === 'diurnal' || dashboardMode === 'both') && (
+          <div className="space-y-6">
+            {/* Key Metrics Highlight Ribbon */}
+            <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-3 sm:p-4">
+                <span className="text-[11px] font-semibold text-slate-400 block uppercase tracking-wider">
+                  Ennis Peak Inversion
+                </span>
+                <div className="mt-1 flex items-baseline gap-2">
+                  <span className="text-2xl sm:text-3xl font-extrabold font-mono text-purple-400">
+                    198.1
+                  </span>
+                  <span className="text-xs text-slate-400 font-mono">µg/m³</span>
+                </div>
+                <span className="text-[11px] text-purple-300 font-medium">
+                  13.2× WHO 24h Threshold (15)
+                </span>
+              </div>
+
+              <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-3 sm:p-4">
+                <span className="text-[11px] font-semibold text-slate-400 block uppercase tracking-wider">
+                  The Hearth Window
+                </span>
+                <div className="mt-1 flex items-baseline gap-2">
+                  <span className="text-2xl sm:text-3xl font-extrabold font-mono text-orange-400">
+                    19:00 - 21:00
+                  </span>
+                  <span className="text-xs text-slate-400 font-mono">UTC</span>
+                </div>
+                <span className="text-[11px] text-orange-300 font-medium">
+                  100% of top annual spikes
+                </span>
+              </div>
+
+              <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-3 sm:p-4">
+                <span className="text-[11px] font-semibold text-slate-400 block uppercase tracking-wider">
+                  Dublin Phoenix Park Baseline
+                </span>
+                <div className="mt-1 flex items-baseline gap-2">
+                  <span className="text-2xl sm:text-3xl font-extrabold font-mono text-cyan-400">
+                    9.1
+                  </span>
+                  <span className="text-xs text-slate-400 font-mono">µg/m³</span>
+                </div>
+                <span className="text-[11px] text-cyan-300 font-medium">
+                  Smoky Coal Ban + Gas Grid
+                </span>
+              </div>
+
+              <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-3 sm:p-4">
+                <span className="text-[11px] font-semibold text-slate-400 block uppercase tracking-wider">
+                  Active EPA Monitors
+                </span>
+                <div className="mt-1 flex items-baseline gap-2">
+                  <span className="text-2xl sm:text-3xl font-extrabold font-mono text-emerald-400">
+                    113
+                  </span>
+                  <span className="text-xs text-slate-400 font-mono">Stations</span>
+                </div>
+                <span className="text-[11px] text-emerald-300 font-medium">
+                  AURN National Network
+                </span>
+              </div>
+            </section>
+
+            {/* 24-Hour Scrubber & Narrative Bar */}
+            <section>
+              <TimelapseSlider
+                currentHour={currentHour}
+                onHourChange={(h) => setCurrentHour(h)}
+                isPlaying={isPlaying}
+                onTogglePlay={() => setIsPlaying(!isPlaying)}
+                playbackSpeed={playbackSpeed}
+                onSpeedToggle={() => setPlaybackSpeed(playbackSpeed === 1 ? 2 : 1)}
+              />
+            </section>
+
+            {/* Core Visualization Grid: Map + Comparison Duel */}
+            <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+              <div className="lg:col-span-5 flex flex-col">
+                <IrelandMap
+                  currentHour={currentHour}
+                  hourlyPoints={hourlyPoints}
+                  selectedStationCode={selectedStationCode}
+                  onSelectStation={(code) => setSelectedStationCode(code)}
+                  targetStations={data.targetStations}
+                  whoLimit={whoLimit}
+                />
+              </div>
+
+              <div className="lg:col-span-7 flex flex-col">
+                <ComparisonDuel
+                  targetStations={data.targetStations}
+                  selectedStationCode={selectedStationCode}
+                  onSelectStation={(code) => setSelectedStationCode(code)}
+                  baselineStationCode={baselineStationCode}
+                  onSelectBaseline={(code) => setBaselineStationCode(code)}
+                  currentHour={currentHour}
+                  whoLimit={whoLimit}
+                />
+              </div>
+            </section>
           </div>
-
-          {/* Right Column: Head-to-Head Duel (7 cols) */}
-          <div className="lg:col-span-7 flex flex-col">
-            <ComparisonDuel
-              targetStations={data.targetStations}
-              selectedStationCode={selectedStationCode}
-              onSelectStation={(code) => setSelectedStationCode(code)}
-              baselineStationCode={baselineStationCode}
-              onSelectBaseline={(code) => setBaselineStationCode(code)}
-              currentHour={currentHour}
-              whoLimit={whoLimit}
-            />
-          </div>
-
-        </section>
-
+        )}
       </main>
 
       {/* Footer */}
