@@ -1218,6 +1218,27 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
                       </text>
                     ))}
 
+                    {/* WHO Annual Exceedance Budget Threshold Line (96 hrs = 4 days/year max) */}
+                    <g>
+                      <line
+                        x1={PL}
+                        y1={getY(96)}
+                        x2={W - PR}
+                        y2={getY(96)}
+                        stroke="#fbbf24"
+                        strokeWidth="1.5"
+                        strokeDasharray="4 3"
+                      />
+                      <text
+                        x={W - PR - 2}
+                        y={getY(96) - 4}
+                        textAnchor="end"
+                        className="fill-amber-400 text-[8.5px] font-mono font-bold"
+                      >
+                        WHO Full-Year Max Allowance (96h / 4 days per yr)
+                      </text>
+                    </g>
+
                     {/* Full period ghost path */}
                     <path
                       d={Array.from({ length: totD }, (_, i) => {
