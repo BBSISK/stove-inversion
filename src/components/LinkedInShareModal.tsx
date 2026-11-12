@@ -11,26 +11,24 @@ export const LinkedInShareModal: React.FC<LinkedInShareModalProps> = ({ isOpen, 
 
   if (!isOpen) return null;
 
-  const postContent = `Why does a quiet regional town like Ennis or Tralee record 20× worse air pollution than central Dublin on a winter evening?
+  const postContent = `Why does a quiet Irish town of 27,000 people record 11× worse winter evening air pollution than central London and 15× worse than Manhattan?
 
-I’ve just published a new interactive data project analyzing telemetry from all 113 active Environmental Protection Agency (EPA) Ireland monitoring stations:
+I’ve just published a new interactive data project analyzing telemetry from all 113 active Environmental Protection Agency (EPA) Ireland monitoring stations against global regulatory benchmarks (UK DEFRA, US EPA AirNow, Airparif):
 
 The 7:00 PM "Stove Inversion" 🌫️🔥
 
-A few startling data points from the EPA’s EN 16450-certified sensor telemetry:
+A few startling findings from the EN 16450-certified sensor telemetry:
 
-1. The Inversion Multiplier: On clear, calm winter nights, fine particulate matter (PM2.5) in Ennis reaches 198.1 µg/m³ — more than 13× the World Health Organization 24-hour safety threshold (15 µg/m³) and 21.7× higher than Dublin Phoenix Park (9.1 µg/m³).
-2. Clockwork Synchronicity: 100% of peak annual spikes occur strictly between 19:00 and 21:00 UTC, aligning with domestic heating cycles rather than traffic rush hours.
-3. The Infrastructure Paradox: Dublin’s 1990 smoky coal ban combined with widespread natural gas grid connections keeps capital baseline levels remarkably clean. Meanwhile, regional valley towns rely on turf, peat briquettes, and wood in topographical basins that trap smoke beneath cold thermal inversion ceilings.
+1. Regional Towns vs. Global Megacities: On calm winter nights, fine particulate matter (PM2.5) in Ennis, Co. Clare reaches 198.1 µg/m³ — more than 13× the WHO 24-hour safety threshold (15 µg/m³), outpolluting Westminster London (17.8 µg/m³), Midtown Manhattan (12.5 µg/m³), Paris (18.6 µg/m³), and even Beijing (61.0 µg/m³) during the evening hearth window.
+2. 30-Day Cumulative Burden: Over a single winter month, Ennis and Tralee accumulate 5× to 9× more hours above the WHO danger threshold than London, New York, or Dublin Phoenix Park.
+3. The Infrastructure Paradox: Dublin’s 1990 smoky coal ban, London’s 1956 Clean Air Act, and NYC’s Clean Heat program keep megacity winter evenings remarkably stable. Meanwhile, regional Irish valley towns without reticulated gas grids rely on solid fuels (turf, peat briquettes, wood) that become trapped under nocturnal thermal inversion lids.
 
 The dashboard features:
-- A 24-hour scrubbable timelapse mapping all 113 EPA monitors across Ireland.
-- Head-to-head comparison duel between regional towns and urban baselines.
-- Interactive atmospheric physics breakdowns and full EPA provenance attribution.
+- A 30-day cumulative monthly timelapse across a 32-county GIS map of Ireland.
+- Animated exposure bar race & head-to-head duel against Dublin, London, New York, Paris, and Beijing.
+- Interactive atmospheric physics breakdowns and full EPA CC BY 4.0 provenance.
 
-Built with Python (telemetry pipeline), React 19, TypeScript, Tailwind CSS, and custom SVG geospatial projections.
-
-Explore the live interactive dashboard and full methodology in my Featured section!
+Explore the live interactive dashboard: https://stove-inversion.onrender.com
 
 #DataAnalytics #DataVisualization #EnvironmentalEngineering #AirQuality #EPA #TypeScript #React #PublicHealth #Ireland`;
 

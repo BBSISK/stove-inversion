@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { AirData, DetailedStation } from '../types';
+import { AirData } from '../types';
 import { IRELAND_COUNTIES } from '../data/irelandGeo';
+import { GLOBAL_BENCHMARKS } from '../data/globalBenchmarks';
 import {
   Play,
   Pause,
@@ -12,9 +13,7 @@ import {
   Calendar,
   TrendingUp,
   Wind,
-  ShieldAlert,
-  Award,
-  Sparkles,
+  Globe,
 } from 'lucide-react';
 
 interface MonthlyCumulativeMapProps {
@@ -130,6 +129,7 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [speed, setSpeed] = useState<number>(1);
   const [cinemaMode, setCinemaMode] = useState<boolean>(false);
+  const [showGlobalCities, setShowGlobalCities] = useState<boolean>(true);
   const [hoveredCode, setHoveredCode] = useState<string | null>(null);
 
   // Playback loop across Day 1 -> Day 30
@@ -177,11 +177,11 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
     });
   }, []);
 
-  // Precompute 30-day cumulative series for all 113 stations
+  // Precompute 30-day cumulative series for all 113 Irish stations + 4 Global Megacities
   const cumulativeByDay = useMemo(() => {
     const whoLimit = data.metadata.whoGuidelineDailyPm25; // 15.0
 
-    // Base daily profile for each station from hourlySnapshots (hours 0..23)
+    // Base daily profile for each Irish station from hourlySnapshots (hours 0..23)
     const stationHourlyMap: Record<string, number[]> = {};
     for (let h = 0; h < 24; h++) {
       const snap = data.hourlySnapshots[String(h)] || [];
@@ -191,7 +191,11 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
       }
     }
 
-    // Build day 1..30 cumulative states
+    // Also include global benchmarks hourly profiles
+    for (const [gCode, gStation] of Object.entries(GLOBAL_BENCHMARKS)) {
+      stationHourlyMap[gCode] = gStation.profile24h.map((p) => p.averagePm25);
+    }
+
     const daysMap: Record<
       number,
       {
@@ -200,16 +204,15 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
           name: string;
           lat: number;
           lon: number;
-          cumDose: number; // total µg/m³·hours inhaled from Day 1 to Day D
-          cumBreachHours: number; // total hours > 15 µg/m³ from Day 1 to Day D
-          eveningPeakMean: number; // mean 7-9 PM reading
-          cigarettesEq: number; // Berkeley Earth: 528 µg/m³·h = 1 cigarette
+          cumDose: number;
+          cumBreachHours: number;
+          eveningPeakMean: number;
+          cigarettesEq: number;
         }[];
         byCode: Record<string, any>;
       }
     > = {};
 
-    // Running accumulators per station
     const runningDose: Record<string, number> = {};
     const runningBreach: Record<string, number> = {};
 
@@ -217,12 +220,17 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
       runningDose[st.code] = 0;
       runningBreach[st.code] = 0;
     }
+    for (const gCode of Object.keys(GLOBAL_BENCHMARKS)) {
+      runningDose[gCode] = 0;
+      runningBreach[gCode] = 0;
+    }
 
     for (const syn of NOVEMBER_SYNOPTIC_DAYS) {
       const d = syn.day;
       const dayList = [];
       const dayByCode: Record<string, any> = {};
 
+      // 1. Process 113 Irish stations
       for (const st of data.allStations) {
         const hours24 = stationHourlyMap[st.code] || Array(24).fill(8);
         const isUrbanOrClean =
@@ -269,6 +277,38 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
         dayByCode[st.code] = item;
       }
 
+      // 2. Process Global Megacity Benchmarks
+      for (const [gCode, gSt] of Object.entries(GLOBAL_BENCHMARKS)) {
+        const hours24 = stationHourlyMap[gCode];
+        let dayDose = 0;
+        let dayBreaches = 0;
+
+        for (let h = 0; h < 24; h++) {
+          const baseVal = hours24[h] || 10;
+          const simVal = baseVal * syn.urbanFactor;
+          dayDose += simVal;
+          if (simVal > whoLimit) {
+            dayBreaches += 1;
+          }
+        }
+
+        runningDose[gCode] += dayDose;
+        runningBreach[gCode] += dayBreaches;
+
+        dayByCode[gCode] = {
+          code: gCode,
+          name: `${gSt.flag} ${gSt.name}`,
+          lat: gSt.lat,
+          lon: gSt.lon,
+          cumDose: Math.round(runningDose[gCode]),
+          cumBreachHours: runningBreach[gCode],
+          eveningPeakMean: gSt.profile24h[19]?.averagePm25 || 14,
+          cigarettesEq: Math.round((runningDose[gCode] / 528) * 10) / 10,
+          isGlobal: true,
+          globalColor: gSt.color,
+        };
+      }
+
       daysMap[d] = { stations: dayList, byCode: dayByCode };
     }
 
@@ -278,30 +318,43 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
   const currentSnapshot = cumulativeByDay[currentDay] || cumulativeByDay[30];
   const currentSynoptic = NOVEMBER_SYNOPTIC_DAYS[currentDay - 1] || NOVEMBER_SYNOPTIC_DAYS[29];
 
-  // Key benchmark stations for the animated Cumulative Bar Race & Staircase Chart
+  // Key benchmark stations for the animated Cumulative Bar Race
   const raceStations = useMemo(() => {
-    const codes = ['EPA-25', 'EPA-71', 'EPA-43', 'EPA-67', 'EPA-24', 'EPA-78', 'EPA-48', 'AQG-23568'];
-    return codes
+    const baseCodes = ['EPA-25', 'EPA-71', 'EPA-43', 'EPA-67', 'EPA-48'];
+    const globalCodes = showGlobalCities
+      ? ['GLOBAL-LON', 'GLOBAL-NYC', 'GLOBAL-PAR']
+      : ['EPA-24', 'EPA-78', 'AQG-23568'];
+
+    const allCodes = [...baseCodes, ...globalCodes];
+
+    return allCodes
       .map((code) => {
         const st = currentSnapshot.byCode[code];
         const target = data.targetStations[code];
+        const globalSt = GLOBAL_BENCHMARKS[code];
         if (!st) return null;
         return {
           ...st,
-          displayName: target ? `${target.name} (${target.county})` : st.name,
-          isBaseline: code === 'EPA-48' || code === 'AQG-23568',
+          displayName: globalSt
+            ? `${globalSt.flag} ${globalSt.name}`
+            : target
+            ? `🇮🇪 ${target.name} (${target.county})`
+            : `🇮🇪 ${st.name}`,
+          isBaseline: code === 'EPA-48' || code === 'AQG-23568' || !!globalSt,
+          customColor: globalSt?.color,
         };
       })
       .filter(Boolean)
-      .sort((a, b) => b!.cumDose - a!.cumDose) as {
+      .sort((a, b) => b!.cumBreachHours - a!.cumBreachHours || b!.cumDose - a!.cumDose) as {
       code: string;
       displayName: string;
       cumDose: number;
       cumBreachHours: number;
       cigarettesEq: number;
       isBaseline: boolean;
+      customColor?: string;
     }[];
-  }, [currentSnapshot, data.targetStations]);
+  }, [currentSnapshot, data.targetStations, showGlobalCities]);
 
   // Helper to shade county polygons based on cumulative progression from Day 1 -> Day 30
   const getCountyCumulativeFill = (cx: number, cy: number, region: 'ROI' | 'NI') => {
@@ -330,6 +383,8 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
 
   const ennisStat = currentSnapshot.byCode['EPA-25'];
   const dublinStat = currentSnapshot.byCode['EPA-48'];
+  const londonStat = currentSnapshot.byCode['GLOBAL-LON'];
+  const nycStat = currentSnapshot.byCode['GLOBAL-NYC'];
   const hoveredStation = hoveredCode ? currentSnapshot.byCode[hoveredCode] : null;
 
   const handleStartTimelapse = () => {
@@ -369,10 +424,10 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
             </div>
 
             <h2 className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
-              How 30 Nights of 7:00 PM "Stove Inversions" Accumulate Across Ireland
+              How 30 Nights of 7:00 PM "Stove Inversions" Outpollute London, New York &amp; Paris
             </h2>
             <p className="text-xs text-slate-400">
-              Watch cumulative WHO breach hours (&gt;15 µg/m³) and particulate exposure build up night after night in regional river valleys while Dublin stays flat.
+              Watch cumulative WHO breach hours (&gt;15 µg/m³) build up night after night in regional Irish river valleys compared against Dublin, London, and Manhattan.
             </p>
           </div>
 
@@ -427,6 +482,86 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
               <span>{cinemaMode ? 'Exit Cinema Frame' : 'LinkedIn Capture Frame'}</span>
             </button>
           </div>
+        </div>
+
+        {/* Global Megacity Evening Peak Comparison Strip */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 mt-4">
+          {[
+            {
+              flag: '🇮🇪',
+              city: 'Ennis (Co. Clare)',
+              pop: 'Pop. 27,000',
+              peak: '198.1 µg/m³',
+              hrs: `${ennisStat?.cumBreachHours || 0}h >WHO`,
+              badge: 'text-fuchsia-300 border-fuchsia-500/40 bg-fuchsia-500/10',
+              valColor: 'text-fuchsia-400',
+            },
+            {
+              flag: '🇮🇪',
+              city: 'Tralee (Co. Kerry)',
+              pop: 'Pop. 26,000',
+              peak: '142.0 µg/m³',
+              hrs: `${currentSnapshot.byCode['EPA-71']?.cumBreachHours || 0}h >WHO`,
+              badge: 'text-rose-300 border-rose-500/30 bg-rose-500/10',
+              valColor: 'text-rose-400',
+            },
+            {
+              flag: '🇨🇳',
+              city: 'Beijing (Chaoyang)',
+              pop: 'Pop. 21.5M',
+              peak: '61.0 µg/m³',
+              hrs: `${currentSnapshot.byCode['GLOBAL-BJS']?.cumBreachHours || 0}h >WHO`,
+              badge: 'text-amber-300 border-amber-500/30 bg-slate-950',
+              valColor: 'text-amber-400',
+            },
+            {
+              flag: '🇫🇷',
+              city: 'Paris (Centre)',
+              pop: 'Pop. 11.2M',
+              peak: '18.6 µg/m³',
+              hrs: `${currentSnapshot.byCode['GLOBAL-PAR']?.cumBreachHours || 0}h >WHO`,
+              badge: 'text-indigo-300 border-slate-800 bg-slate-950',
+              valColor: 'text-indigo-400',
+            },
+            {
+              flag: '🇬🇧',
+              city: 'London (Westminster)',
+              pop: 'Pop. 8.9M',
+              peak: '17.8 µg/m³',
+              hrs: `${londonStat?.cumBreachHours || 0}h >WHO`,
+              badge: 'text-sky-300 border-slate-800 bg-slate-950',
+              valColor: 'text-sky-400',
+            },
+            {
+              flag: '🇺🇸',
+              city: 'New York (Manhattan)',
+              pop: 'Pop. 8.5M',
+              peak: '12.5 µg/m³',
+              hrs: `${nycStat?.cumBreachHours || 0}h >WHO`,
+              badge: 'text-emerald-300 border-slate-800 bg-slate-950',
+              valColor: 'text-emerald-400',
+            },
+          ].map((item) => (
+            <div
+              key={item.city}
+              className={`rounded-xl border p-2.5 flex flex-col justify-between ${item.badge}`}
+            >
+              <div className="flex items-center justify-between text-[11px] font-bold text-white">
+                <span className="truncate">
+                  {item.flag} {item.city}
+                </span>
+              </div>
+              <div className="mt-1 flex items-baseline justify-between">
+                <span className={`text-sm font-extrabold font-mono ${item.valColor}`}>
+                  {item.hrs}
+                </span>
+                <span className="text-[10px] font-mono text-slate-400">
+                  Pk: {item.peak}
+                </span>
+              </div>
+              <span className="text-[9.5px] text-slate-500 mt-0.5">{item.pop}</span>
+            </div>
+          ))}
         </div>
 
         {/* 30-Day Interactive Timeline Scrubber Bar */}
@@ -722,11 +857,12 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
             {/* Bottom Map Summary Pill */}
             <div className="pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-[11px]">
               <span className="text-slate-400">
-                By <strong className="text-white">{currentSynoptic.dateLabel}</strong>, Ennis has breached WHO safety limits for{' '}
-                <strong className="text-fuchsia-400 font-mono">{ennisStat?.cumBreachHours || 0} hours</strong> vs{' '}
-                <strong className="text-sky-400 font-mono">{dublinStat?.cumBreachHours || 0} hours</strong> in Dublin Phoenix Park.
+                By <strong className="text-white">{currentSynoptic.dateLabel}</strong>, Ennis has{' '}
+                <strong className="text-fuchsia-400 font-mono">{ennisStat?.cumBreachHours || 0}h &gt;WHO</strong> vs{' '}
+                <strong className="text-sky-400 font-mono">{londonStat?.cumBreachHours || 0}h</strong> in London &amp;{' '}
+                <strong className="text-emerald-400 font-mono">{nycStat?.cumBreachHours || 0}h</strong> in NYC.
               </span>
-              <span className="font-mono text-[10px] text-slate-500">113 EPA AURN Monitors</span>
+              <span className="font-mono text-[10px] text-slate-500">EPA + DEFRA + US EPA</span>
             </div>
           </div>
 
@@ -735,33 +871,46 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
             {/* Panel 1: 30-Day Cumulative Exposure Leaderboard (Bar Race) */}
             <div className="bg-slate-950/85 border border-slate-800 rounded-2xl p-4 flex-1 flex flex-col justify-between">
               <div>
-                <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-800">
                   <div>
                     <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
                       <Flame className="w-4 h-4 text-orange-400" />
                       <span>Cumulative Exposure Race (Day 1 &rarr; {currentDay})</span>
                     </h3>
                     <p className="text-[11px] text-slate-400">
-                      Total PM2.5 load (µg/m³·hours) &amp; passive cigarette equivalent*
+                      Regional Irish towns vs Global Megacities (hours &gt; WHO 15 µg/m³)
                     </p>
                   </div>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900 text-slate-300 border border-slate-800">
-                    {currentSynoptic.dateLabel}
-                  </span>
+                  <button
+                    onClick={() => setShowGlobalCities(!showGlobalCities)}
+                    className={`px-2 py-1 rounded-lg text-[10px] font-semibold border transition cursor-pointer flex items-center gap-1 shrink-0 ${
+                      showGlobalCities
+                        ? 'bg-sky-500/15 text-sky-300 border-sky-500/30'
+                        : 'bg-slate-900 text-slate-400 border-slate-800'
+                    }`}
+                  >
+                    <Globe className="w-3 h-3" />
+                    <span>{showGlobalCities ? 'Global On' : 'Irish Only'}</span>
+                  </button>
                 </div>
 
                 {/* Animated Horizontal Bars */}
-                <div className="mt-3 space-y-2.5">
+                <div className="mt-3 space-y-2">
                   {raceStations.map((st) => {
-                    const maxPossibleDose = 18500;
-                    const widthPct = Math.min(100, Math.max(4, (st.cumDose / maxPossibleDose) * 100));
+                    const maxPossibleBreach = 210;
+                    const widthPct = Math.min(100, Math.max(4, (st.cumBreachHours / maxPossibleBreach) * 100));
                     const color = getCumulativeColor(st.cumBreachHours, st.cumDose);
+                    const barColor = st.customColor || (st.isBaseline ? '#38bdf8' : color.bg);
                     const isSelected = st.code === selectedStationCode;
 
                     return (
                       <div
                         key={st.code}
-                        onClick={() => onSelectStation(st.code)}
+                        onClick={() => {
+                          if (!st.code.startsWith('GLOBAL-')) {
+                            onSelectStation(st.code);
+                          }
+                        }}
                         className={`p-2 rounded-xl border transition cursor-pointer ${
                           isSelected
                             ? 'bg-slate-900 border-slate-600'
@@ -778,7 +927,7 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
                             </span>
                             <span
                               className="font-extrabold text-xs"
-                              style={{ color: color.bg }}
+                              style={{ color: barColor }}
                             >
                               {st.cumBreachHours}h &gt;WHO
                             </span>
@@ -790,7 +939,7 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
                             className="h-full rounded-full transition-all duration-300"
                             style={{
                               width: `${widthPct}%`,
-                              backgroundColor: st.isBaseline ? '#38bdf8' : color.bg,
+                              backgroundColor: barColor,
                             }}
                           />
                         </div>
@@ -801,11 +950,11 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
               </div>
 
               <p className="text-[10px] text-slate-500 mt-3 pt-2 border-t border-slate-800/70">
-                *Berkeley Earth equivalence: inhaling 22 µg/m³ of PM2.5 for 24 hours (528 µg/m³·h) equals the lung damage of 1 passive cigarette.
+                *Berkeley Earth equivalence: inhaling 22 µg/m³ of PM2.5 for 24h (528 µg/m³·h) equals 1 passive cigarette. Global data: UK DEFRA AURN, US EPA AirNow, Airparif.
               </p>
             </div>
 
-            {/* Panel 2: 30-Day Cumulative Divergence Curve (Ennis vs Dublin) */}
+            {/* Panel 2: 30-Day Cumulative Divergence Curve (Ennis vs London, NYC & Dublin) */}
             <div className="bg-slate-950/85 border border-slate-800 rounded-2xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <div>
@@ -814,15 +963,15 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
                     <span>30-Day Cumulative WHO Breach Trajectory</span>
                   </h3>
                   <p className="text-[10px] text-slate-400">
-                    Total hours exceeding 15 µg/m³ (Nov 1 &rarr; Nov 30)
+                    Ennis &amp; Tralee vs. London, New York City &amp; Dublin
                   </p>
                 </div>
                 <div className="text-right font-mono">
                   <span className="text-xs font-extrabold text-fuchsia-400">
-                    {ennisStat && dublinStat && dublinStat.cumBreachHours > 0
-                      ? `${(ennisStat.cumBreachHours / dublinStat.cumBreachHours).toFixed(1)}×`
-                      : '13.5×'}{' '}
-                    Gap
+                    {ennisStat && londonStat && londonStat.cumBreachHours > 0
+                      ? `${(ennisStat.cumBreachHours / londonStat.cumBreachHours).toFixed(1)}×`
+                      : '5.5×'}{' '}
+                    London
                   </span>
                 </div>
               </div>
@@ -835,13 +984,15 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
                 const PR = 14;
                 const PT = 12;
                 const PB = 22;
-                const maxHrs = 230;
+                const maxHrs = 220;
 
                 const getX = (day: number) => PL + ((day - 1) / 29) * (W - PL - PR);
                 const getY = (hrs: number) => H - PB - (hrs / maxHrs) * (H - PT - PB);
 
                 const ennisPts: string[] = [];
                 const traleePts: string[] = [];
+                const londonPts: string[] = [];
+                const nycPts: string[] = [];
                 const dublinPts: string[] = [];
 
                 for (let d = 1; d <= currentDay; d++) {
@@ -850,6 +1001,8 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
                   const x = getX(d);
                   ennisPts.push(`${d === 1 ? 'M' : 'L'}${x},${getY(snap.byCode['EPA-25']?.cumBreachHours || 0)}`);
                   traleePts.push(`${d === 1 ? 'M' : 'L'}${x},${getY(snap.byCode['EPA-71']?.cumBreachHours || 0)}`);
+                  londonPts.push(`${d === 1 ? 'M' : 'L'}${x},${getY(snap.byCode['GLOBAL-LON']?.cumBreachHours || 0)}`);
+                  nycPts.push(`${d === 1 ? 'M' : 'L'}${x},${getY(snap.byCode['GLOBAL-NYC']?.cumBreachHours || 0)}`);
                   dublinPts.push(`${d === 1 ? 'M' : 'L'}${x},${getY(snap.byCode['EPA-48']?.cumBreachHours || 0)}`);
                 }
 
@@ -890,7 +1043,7 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
                       </text>
                     ))}
 
-                    {/* Full 30-day ghost paths */}
+                    {/* Full 30-day ghost path */}
                     <path
                       d={Array.from({ length: 30 }, (_, i) => {
                         const d = i + 1;
@@ -906,11 +1059,13 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
                     />
 
                     {/* Active progressive paths */}
-                    <path d={dublinPts.join(' ')} fill="none" stroke="#38bdf8" strokeWidth="2.2" />
+                    <path d={dublinPts.join(' ')} fill="none" stroke="#64748b" strokeWidth="1.6" strokeDasharray="2 2" />
+                    <path d={nycPts.join(' ')} fill="none" stroke="#10b981" strokeWidth="2" />
+                    <path d={londonPts.join(' ')} fill="none" stroke="#38bdf8" strokeWidth="2.2" />
                     <path d={traleePts.join(' ')} fill="none" stroke="#f97316" strokeWidth="2.2" />
                     <path d={ennisPts.join(' ')} fill="none" stroke="#d946ef" strokeWidth="2.8" />
 
-                    {/* Current Day Playhead Dot */}
+                    {/* Current Day Playhead Dots */}
                     <circle
                       cx={getX(currentDay)}
                       cy={getY(ennisStat?.cumBreachHours || 0)}
@@ -921,9 +1076,17 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
                     />
                     <circle
                       cx={getX(currentDay)}
-                      cy={getY(dublinStat?.cumBreachHours || 0)}
-                      r="4"
+                      cy={getY(londonStat?.cumBreachHours || 0)}
+                      r="3.8"
                       fill="#38bdf8"
+                      stroke="#ffffff"
+                      strokeWidth="1.5"
+                    />
+                    <circle
+                      cx={getX(currentDay)}
+                      cy={getY(nycStat?.cumBreachHours || 0)}
+                      r="3.5"
+                      fill="#10b981"
                       stroke="#ffffff"
                       strokeWidth="1.5"
                     />
@@ -931,19 +1094,24 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
                 );
               })()}
 
-              <div className="flex items-center justify-between text-[10px] pt-1 border-t border-slate-800/80">
-                <div className="flex items-center gap-3">
-                  <span className="flex items-center gap-1 text-slate-300">
-                    <span className="w-2.5 h-1 rounded bg-fuchsia-500"></span>Ennis
+              <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] pt-1 border-t border-slate-800/80">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <span className="flex items-center gap-1 text-slate-200 font-semibold">
+                    <span className="w-2.5 h-1 rounded bg-fuchsia-500"></span>🇮🇪 Ennis
                   </span>
                   <span className="flex items-center gap-1 text-slate-300">
-                    <span className="w-2.5 h-1 rounded bg-orange-500"></span>Tralee
+                    <span className="w-2.5 h-1 rounded bg-orange-500"></span>🇮🇪 Tralee
                   </span>
-                  <span className="flex items-center gap-1 text-slate-300">
-                    <span className="w-2.5 h-1 rounded bg-sky-400"></span>Dublin (Phoenix Pk)
+                  <span className="flex items-center gap-1 text-sky-300 font-semibold">
+                    <span className="w-2.5 h-1 rounded bg-sky-400"></span>🇬🇧 London
+                  </span>
+                  <span className="flex items-center gap-1 text-emerald-300 font-semibold">
+                    <span className="w-2.5 h-1 rounded bg-emerald-400"></span>🇺🇸 NYC
+                  </span>
+                  <span className="flex items-center gap-1 text-slate-400">
+                    <span className="w-2.5 h-0.5 border-b border-dashed border-slate-400"></span>🇮🇪 Dublin
                   </span>
                 </div>
-                <span className="font-mono text-slate-500">30-Day Cumulative</span>
               </div>
             </div>
           </div>

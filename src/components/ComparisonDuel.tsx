@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { DetailedStation } from '../types';
-import { Flame, ShieldCheck, TrendingUp, AlertTriangle, ArrowRight, Activity, Calendar } from 'lucide-react';
+import { GLOBAL_BENCHMARKS } from '../data/globalBenchmarks';
+import { Flame, Activity, Globe } from 'lucide-react';
 
 interface ComparisonDuelProps {
   targetStations: Record<string, DetailedStation>;
@@ -23,27 +24,35 @@ export const ComparisonDuel: React.FC<ComparisonDuelProps> = ({
 }) => {
   const [viewMode, setViewMode] = useState<'diurnal' | 'peak'>('diurnal');
 
+  // Combine Irish target stations + Global Megacity Benchmarks
+  const allBaselines: Record<string, DetailedStation> = {
+    ...targetStations,
+    ...GLOBAL_BENCHMARKS,
+  };
+
   const regionalStation = targetStations[selectedStationCode] || targetStations['EPA-25'];
-  const baselineStation = targetStations[baselineStationCode] || targetStations['EPA-48'];
+  const baselineStation = allBaselines[baselineStationCode] || targetStations['EPA-48'];
+  const globalBaseline = GLOBAL_BENCHMARKS[baselineStationCode];
 
   // Determine points based on mode
   const getSeries = (station: DetailedStation) => {
     if (viewMode === 'peak' && station.nov2PeakInversion && station.nov2PeakInversion.length > 0) {
-      return station.nov2PeakInversion.map(p => ({ hour: p.hour, val: p.pm25 }));
+      return station.nov2PeakInversion.map((p) => ({ hour: p.hour, val: p.pm25 }));
     }
-    return station.profile24h.map(p => ({ hour: p.hour, val: p.averagePm25 }));
+    return station.profile24h.map((p) => ({ hour: p.hour, val: p.averagePm25 }));
   };
 
   const regionalSeries = getSeries(regionalStation);
   const baselineSeries = getSeries(baselineStation);
 
   // Current hour values
-  const currentRegionalPoint = regionalSeries.find(p => p.hour === currentHour) || { hour: currentHour, val: 0 };
-  const currentBaselinePoint = baselineSeries.find(p => p.hour === currentHour) || { hour: currentHour, val: 0.1 };
+  const currentRegionalPoint = regionalSeries.find((p) => p.hour === currentHour) || { hour: currentHour, val: 0 };
+  const currentBaselinePoint = baselineSeries.find((p) => p.hour === currentHour) || { hour: currentHour, val: 0.1 };
 
-  const multiplier = currentBaselinePoint.val > 0
-    ? (currentRegionalPoint.val / currentBaselinePoint.val).toFixed(1)
-    : '1.0';
+  const multiplier =
+    currentBaselinePoint.val > 0
+      ? (currentRegionalPoint.val / currentBaselinePoint.val).toFixed(1)
+      : '1.0';
 
   // Chart dimensions
   const CHART_WIDTH = 640;
@@ -54,8 +63,8 @@ export const ComparisonDuel: React.FC<ComparisonDuelProps> = ({
   const PADDING_BOTTOM = 35;
 
   const maxVal = Math.max(
-    ...regionalSeries.map(p => p.val),
-    ...baselineSeries.map(p => p.val),
+    ...regionalSeries.map((p) => p.val),
+    ...baselineSeries.map((p) => p.val),
     whoLimit * 1.5,
     30
   );
@@ -92,12 +101,16 @@ export const ComparisonDuel: React.FC<ComparisonDuelProps> = ({
   const whoY = getY(whoLimit);
 
   // Options
-  const regionalKeys = Object.keys(targetStations).filter(k => !k.startsWith('EPA-48') && !k.startsWith('EPA-22') && !k.startsWith('EPA-91') && !k.startsWith('AQG-23568'));
-  const baselineKeys = Object.keys(targetStations).filter(k => k.startsWith('EPA-48') || k.startsWith('EPA-22') || k.startsWith('EPA-91') || k.startsWith('AQG-23568'));
+  const regionalKeys = Object.keys(targetStations).filter(
+    (k) => !k.startsWith('EPA-48') && !k.startsWith('EPA-22') && !k.startsWith('EPA-91') && !k.startsWith('AQG-23568')
+  );
+  const irishBaselineKeys = Object.keys(targetStations).filter(
+    (k) => k.startsWith('EPA-48') || k.startsWith('EPA-22') || k.startsWith('EPA-91') || k.startsWith('AQG-23568')
+  );
+  const globalKeys = Object.keys(GLOBAL_BENCHMARKS);
 
   return (
     <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 lg:p-6 shadow-xl flex flex-col justify-between">
-      
       {/* Top Header & Selectors */}
       <div>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
@@ -105,11 +118,11 @@ export const ComparisonDuel: React.FC<ComparisonDuelProps> = ({
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
               <h2 className="text-base sm:text-lg font-bold text-white">
-                Head-to-Head Telemetry Duel
+                Head-to-Head Telemetry Duel (Ireland &amp; Global Cities)
               </h2>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Compare regional solid-fuel heating against the natural gas & banned-coal Dublin baseline.
+              Compare regional solid-fuel towns against Dublin, London, New York City, Paris &amp; Beijing.
             </p>
           </div>
 
@@ -139,13 +152,40 @@ export const ComparisonDuel: React.FC<ComparisonDuelProps> = ({
           </div>
         </div>
 
+        {/* Quick Global Benchmark Pills */}
+        <div className="flex flex-wrap items-center gap-1.5 mt-3 text-[11px]">
+          <span className="text-slate-500 font-medium flex items-center gap-1 mr-1">
+            <Globe className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Compare against:</span>
+          </span>
+          {[
+            { code: 'EPA-48', label: '🇮🇪 Dublin (Phoenix Pk)' },
+            { code: 'GLOBAL-LON', label: '🇬🇧 London (Westminster)' },
+            { code: 'GLOBAL-NYC', label: '🇺🇸 New York (Manhattan)' },
+            { code: 'GLOBAL-PAR', label: '🇫🇷 Paris (Centre)' },
+            { code: 'GLOBAL-BJS', label: '🇨🇳 Beijing (Chaoyang)' },
+            { code: 'AQG-23568', label: '🌊 Achill Island' },
+          ].map((preset) => (
+            <button
+              key={preset.code}
+              onClick={() => onSelectBaseline(preset.code)}
+              className={`px-2.5 py-1 rounded-lg font-semibold transition cursor-pointer ${
+                baselineStationCode === preset.code
+                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                  : 'bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800'
+              }`}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+
         {/* Station Selectors Dropdown Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 my-4">
-          
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 my-3.5">
           {/* Regional Station Selector */}
           <div className="p-3 rounded-xl bg-slate-950 border border-rose-500/30">
             <label className="block text-[11px] font-semibold text-rose-400 mb-1 uppercase tracking-wider">
-              Regional Town (Solid Fuel / Inversion Basin)
+              🇮🇪 Regional Town (Solid Fuel / Inversion Basin)
             </label>
             <select
               value={selectedStationCode}
@@ -169,41 +209,56 @@ export const ComparisonDuel: React.FC<ComparisonDuelProps> = ({
             </div>
           </div>
 
-          {/* Baseline Station Selector */}
+          {/* Baseline Station Selector (Irish + Global Megacities) */}
           <div className="p-3 rounded-xl bg-slate-950 border border-cyan-500/30">
             <label className="block text-[11px] font-semibold text-cyan-400 mb-1 uppercase tracking-wider">
-              Control / Baseline Monitor
+              Control / Global Megacity Benchmark
             </label>
             <select
               value={baselineStationCode}
               onChange={(e) => onSelectBaseline(e.target.value)}
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-white focus:outline-none focus:border-cyan-400 cursor-pointer"
             >
-              {baselineKeys.map((code) => {
-                const s = targetStations[code];
-                return (
-                  <option key={code} value={code}>
-                    {s.name} ({s.type})
-                  </option>
-                );
-              })}
+              <optgroup label="Global Megacity Benchmarks">
+                {globalKeys.map((code) => {
+                  const g = GLOBAL_BENCHMARKS[code];
+                  return (
+                    <option key={code} value={code}>
+                      {g.flag} {g.name} — {g.type}
+                    </option>
+                  );
+                })}
+              </optgroup>
+              <optgroup label="Irish Baselines (Dublin & Atlantic)">
+                {irishBaselineKeys.map((code) => {
+                  const s = targetStations[code];
+                  return (
+                    <option key={code} value={code}>
+                      🇮🇪 {s.name} ({s.type})
+                    </option>
+                  );
+                })}
+              </optgroup>
             </select>
             <div className="mt-2 flex items-center justify-between text-xs">
-              <span className="text-slate-400">Hour {String(currentHour).padStart(2, '0')}:00:</span>
-              <span className="text-cyan-400 font-extrabold font-mono text-sm">
+              <span className="text-slate-400">
+                {globalBaseline ? globalBaseline.agency : `Hour ${String(currentHour).padStart(2, '0')}:00:`}
+              </span>
+              <span className="text-cyan-400 font-extrabold font-mono text-sm shrink-0 ml-2">
                 {currentBaselinePoint.val} µg/m³
               </span>
             </div>
           </div>
-
         </div>
 
         {/* Dynamic Smog Multiplier Banner */}
-        <div className={`p-3 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-4 ${
-          parseFloat(multiplier) >= 3.0
-            ? 'bg-rose-500/10 border-rose-500/30 text-rose-200'
-            : 'bg-slate-950 border-slate-800 text-slate-300'
-        }`}>
+        <div
+          className={`p-3 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-4 ${
+            parseFloat(multiplier) >= 3.0
+              ? 'bg-rose-500/10 border-rose-500/30 text-rose-200'
+              : 'bg-slate-950 border-slate-800 text-slate-300'
+          }`}
+        >
           <div className="flex items-center gap-2">
             <Activity className="w-4 h-4 text-rose-400 shrink-0" />
             <span className="text-xs">
@@ -212,7 +267,11 @@ export const ComparisonDuel: React.FC<ComparisonDuelProps> = ({
               <span className="px-1.5 py-0.5 rounded bg-rose-500/30 text-rose-100 font-mono font-bold text-sm">
                 {multiplier}×
               </span>{' '}
-              more polluted than <strong className="text-cyan-300">{baselineStation.name}</strong>.
+              more polluted than{' '}
+              <strong className="text-cyan-300">
+                {globalBaseline ? `${globalBaseline.flag} ${globalBaseline.name}` : baselineStation.name}
+              </strong>
+              .
             </span>
           </div>
 
@@ -388,11 +447,13 @@ export const ComparisonDuel: React.FC<ComparisonDuelProps> = ({
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5">
             <span className="w-3 h-1 bg-rose-500 rounded"></span>
-            <span className="text-slate-300 font-medium">{regionalStation.name}</span>
+            <span className="text-slate-300 font-medium">🇮🇪 {regionalStation.name}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-3 h-1 bg-cyan-400 rounded"></span>
-            <span className="text-slate-300 font-medium">{baselineStation.name}</span>
+            <span className="text-slate-300 font-medium">
+              {globalBaseline ? `${globalBaseline.flag} ${globalBaseline.name}` : `🇮🇪 ${baselineStation.name}`}
+            </span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-3 h-0.5 border-b border-dashed border-amber-400"></span>
@@ -401,10 +462,11 @@ export const ComparisonDuel: React.FC<ComparisonDuelProps> = ({
         </div>
 
         <p className="text-[11px] text-slate-500">
-          Source: Sonitus Systems / EPA Ireland high-resolution telemetry.
+          {globalBaseline
+            ? `${globalBaseline.agency} — ${globalBaseline.policyNote}`
+            : 'Source: Sonitus Systems / EPA Ireland high-resolution telemetry.'}
         </p>
       </div>
-
     </div>
   );
 };
