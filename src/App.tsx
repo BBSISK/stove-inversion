@@ -136,8 +136,8 @@ export const App: React.FC = () => {
 
           <div className="flex items-center gap-4 text-xs font-mono px-2">
             <div>
-              <span className="text-slate-500">Ennis Peak: </span>
-              <strong className="text-fuchsia-400">198.1 µg/m³</strong>
+              <span className="text-slate-500">Ennis 2026 Peak: </span>
+              <strong className="text-fuchsia-400">283.6 µg/m³</strong>
             </div>
             <span className="text-slate-700">|</span>
             <div>

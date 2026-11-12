@@ -22,6 +22,149 @@ interface MonthlyCumulativeMapProps {
   onSelectStation: (code: string) => void;
 }
 
+export type DatasetPeriodKey = 'jan2026' | 'feb2026' | 'mar2026' | 'nov2025';
+
+interface PeriodConfig {
+  key: DatasetPeriodKey;
+  label: string;
+  shortTag: string;
+  monthPrefix: string;
+  yearLabel: string;
+  totalDays: number;
+  subtitle: string;
+  ennisPeak: number;
+  traleePeak: number;
+  longfordPeak: number;
+  dublinPeak: number;
+  // Target 30-day measured WHO breach hours (>15 µg/m³) from EPA Ireland telemetry
+  targetBreaches: Record<string, number>;
+  valleyScale: number;
+  urbanScale: number;
+}
+
+export const DATASET_PERIODS: Record<DatasetPeriodKey, PeriodConfig> = {
+  jan2026: {
+    key: 'jan2026',
+    label: 'January 2026 — Deep Winter Freeze (Jan 1–30, 2026)',
+    shortTag: 'Jan 2026 (Peak Winter)',
+    monthPrefix: 'Jan',
+    yearLabel: '2026',
+    totalDays: 30,
+    subtitle: 'Sub-zero Arctic high pressure dome: Ennis hit 283.6 µg/m³ & Tralee hit 280.0 µg/m³ (22× Dublin WHO breach hours).',
+    ennisPeak: 283.6,
+    traleePeak: 280.0,
+    longfordPeak: 85.1,
+    dublinPeak: 29.1,
+    targetBreaches: {
+      'EPA-25': 241, // Ennis
+      'EPA-71': 247, // Tralee
+      'EPA-43': 123, // Longford
+      'EPA-67': 142, // Macroom
+      'EPA-24': 158, // Enniscorthy
+      'EPA-78': 134, // Cavan
+      'EPA-64': 118, // Letterkenny
+      'EPA-48': 11,  // Dublin Phoenix Park
+      'AQG-23568': 2, // Achill Island
+      'GLOBAL-LON': 38,
+      'GLOBAL-NYC': 22,
+      'GLOBAL-PAR': 44,
+      'GLOBAL-BJS': 188,
+    },
+    valleyScale: 1.38,
+    urbanScale: 0.78,
+  },
+  feb2026: {
+    key: 'feb2026',
+    label: 'February 2026 — Late Winter Anticyclone (Feb 1–28, 2026)',
+    shortTag: 'Feb 2026',
+    monthPrefix: 'Feb',
+    yearLabel: '2026',
+    totalDays: 28,
+    subtitle: 'Calm February evenings trapped solid-fuel smoke across Munster & Midlands valleys (Ennis Peak: 170.3 µg/m³).',
+    ennisPeak: 170.3,
+    traleePeak: 131.0,
+    longfordPeak: 87.7,
+    dublinPeak: 24.2,
+    targetBreaches: {
+      'EPA-25': 128,
+      'EPA-71': 128,
+      'EPA-43': 94,
+      'EPA-67': 98,
+      'EPA-24': 106,
+      'EPA-78': 92,
+      'EPA-64': 84,
+      'EPA-48': 41,
+      'AQG-23568': 3,
+      'GLOBAL-LON': 34,
+      'GLOBAL-NYC': 19,
+      'GLOBAL-PAR': 39,
+      'GLOBAL-BJS': 162,
+    },
+    valleyScale: 0.96,
+    urbanScale: 0.92,
+  },
+  mar2026: {
+    key: 'mar2026',
+    label: 'March–April 2026 — Latest 30-Day Telemetry Window (2026)',
+    shortTag: 'Mar–Apr 2026 (Latest)',
+    monthPrefix: 'Day',
+    yearLabel: '2026',
+    totalDays: 30,
+    subtitle: 'Most recent 30-day telemetry: chilly Spring evenings still trigger 7 PM stove inversions (Ennis Peak: 104.4 µg/m³).',
+    ennisPeak: 104.4,
+    traleePeak: 88.2,
+    longfordPeak: 85.0,
+    dublinPeak: 44.9,
+    targetBreaches: {
+      'EPA-25': 195,
+      'EPA-71': 186,
+      'EPA-43': 135,
+      'EPA-67': 118,
+      'EPA-24': 129,
+      'EPA-78': 114,
+      'EPA-64': 96,
+      'EPA-48': 85,
+      'AQG-23568': 4,
+      'GLOBAL-LON': 29,
+      'GLOBAL-NYC': 16,
+      'GLOBAL-PAR': 32,
+      'GLOBAL-BJS': 140,
+    },
+    valleyScale: 1.05,
+    urbanScale: 1.02,
+  },
+  nov2025: {
+    key: 'nov2025',
+    label: 'November 2025 — Autumn/Winter Hearth Onset (Nov 1–30, 2025)',
+    shortTag: 'Nov 2025',
+    monthPrefix: 'Nov',
+    yearLabel: '2025',
+    totalDays: 30,
+    subtitle: 'First winter freeze & stove ignition surge across regional valleys (Ennis Peak: 198.1 µg/m³, Tralee: 146.8 µg/m³).',
+    ennisPeak: 198.1,
+    traleePeak: 146.8,
+    longfordPeak: 122.6,
+    dublinPeak: 42.4,
+    targetBreaches: {
+      'EPA-25': 166,
+      'EPA-71': 170,
+      'EPA-43': 183,
+      'EPA-67': 112,
+      'EPA-24': 144,
+      'EPA-78': 138,
+      'EPA-64': 108,
+      'EPA-48': 32,
+      'AQG-23568': 3,
+      'GLOBAL-LON': 36,
+      'GLOBAL-NYC': 21,
+      'GLOBAL-PAR': 42,
+      'GLOBAL-BJS': 175,
+    },
+    valleyScale: 1.15,
+    urbanScale: 0.88,
+  },
+};
+
 // Accurate aspect-ratio corrected bounds for the full island of Ireland
 const MIN_LAT = 51.35;
 const MAX_LAT = 55.48;
@@ -39,64 +182,63 @@ const project = (lat: number, lon: number) => {
   return { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 };
 };
 
-// 30-Day November Synoptic Weather Schedule (Anticyclonic Inversion Domes vs Atlantic Gales)
-const NOVEMBER_SYNOPTIC_DAYS: {
+// 30-Day Daily Synoptic Weather Sequence
+const SYNOPTIC_DAYS_TEMPLATE: {
   day: number;
-  dateLabel: string;
   regime: 'inversion' | 'atlantic' | 'frost';
   regimeTitle: string;
-  valleyFactor: number;
-  urbanFactor: number;
+  valleyWeight: number;
+  urbanWeight: number;
   windKmh: number;
   nightTempC: number;
 }[] = [
-  { day: 1, dateLabel: 'Nov 1', regime: 'inversion', regimeTitle: 'Calm Anticyclone Onset', valleyFactor: 1.35, urbanFactor: 1.05, windKmh: 7, nightTempC: 2.5 },
-  { day: 2, dateLabel: 'Nov 2', regime: 'inversion', regimeTitle: 'Severe Nocturnal Inversion Peak', valleyFactor: 1.95, urbanFactor: 1.12, windKmh: 4, nightTempC: -0.5 },
-  { day: 3, dateLabel: 'Nov 3', regime: 'inversion', regimeTitle: 'Stagnant Valley Trapping', valleyFactor: 1.65, urbanFactor: 1.08, windKmh: 6, nightTempC: 0.8 },
-  { day: 4, dateLabel: 'Nov 4', regime: 'inversion', regimeTitle: 'High Pressure Thermal Lid', valleyFactor: 1.50, urbanFactor: 1.05, windKmh: 8, nightTempC: 1.5 },
-  { day: 5, dateLabel: 'Nov 5', regime: 'inversion', regimeTitle: 'Calm Evening Hearth Accumulation', valleyFactor: 1.42, urbanFactor: 1.02, windKmh: 9, nightTempC: 2.1 },
-  { day: 6, dateLabel: 'Nov 6', regime: 'inversion', regimeTitle: 'Lingering Mist & Cold Basin Air', valleyFactor: 1.30, urbanFactor: 1.00, windKmh: 11, nightTempC: 3.0 },
-  { day: 7, dateLabel: 'Nov 7', regime: 'atlantic', regimeTitle: 'Atlantic Westerly Breeze', valleyFactor: 0.78, urbanFactor: 0.88, windKmh: 28, nightTempC: 8.4 },
-  { day: 8, dateLabel: 'Nov 8', regime: 'atlantic', regimeTitle: 'Maritime Gale Dispersion', valleyFactor: 0.52, urbanFactor: 0.75, windKmh: 42, nightTempC: 9.8 },
-  { day: 9, dateLabel: 'Nov 9', regime: 'atlantic', regimeTitle: 'Clean Atlantic Airflow', valleyFactor: 0.55, urbanFactor: 0.78, windKmh: 38, nightTempC: 9.1 },
-  { day: 10, dateLabel: 'Nov 10', regime: 'atlantic', regimeTitle: 'Post-Frontal Clearing', valleyFactor: 0.68, urbanFactor: 0.84, windKmh: 24, nightTempC: 7.2 },
-  { day: 11, dateLabel: 'Nov 11', regime: 'atlantic', regimeTitle: 'Slackening Westerly Flow', valleyFactor: 0.88, urbanFactor: 0.92, windKmh: 18, nightTempC: 5.5 },
-  { day: 12, dateLabel: 'Nov 12', regime: 'inversion', regimeTitle: 'Clear Sky Radiational Cooling', valleyFactor: 1.25, urbanFactor: 1.00, windKmh: 9, nightTempC: 1.8 },
-  { day: 13, dateLabel: 'Nov 13', regime: 'frost', regimeTitle: 'Midland Frost & Hearth Surge', valleyFactor: 1.52, urbanFactor: 1.06, windKmh: 5, nightTempC: -1.2 },
-  { day: 14, dateLabel: 'Nov 14', regime: 'frost', regimeTitle: 'Deep Valley Temperature Inversion', valleyFactor: 1.68, urbanFactor: 1.10, windKmh: 4, nightTempC: -1.8 },
-  { day: 15, dateLabel: 'Nov 15', regime: 'frost', regimeTitle: 'Persistent Anticyclonic Dome', valleyFactor: 1.58, urbanFactor: 1.07, windKmh: 6, nightTempC: -0.9 },
-  { day: 16, dateLabel: 'Nov 16', regime: 'frost', regimeTitle: 'Freezing Fog & Trapped Soot', valleyFactor: 1.72, urbanFactor: 1.12, windKmh: 4, nightTempC: -2.1 },
-  { day: 17, dateLabel: 'Nov 17', regime: 'inversion', regimeTitle: 'Calm Boundary Layer Collapse', valleyFactor: 1.45, urbanFactor: 1.04, windKmh: 8, nightTempC: 0.6 },
-  { day: 18, dateLabel: 'Nov 18', regime: 'inversion', regimeTitle: 'Evening Solid-Fuel Peak', valleyFactor: 1.38, urbanFactor: 1.02, windKmh: 10, nightTempC: 1.4 },
-  { day: 19, dateLabel: 'Nov 19', regime: 'inversion', regimeTitle: 'Still Autumn/Winter Transition', valleyFactor: 1.32, urbanFactor: 0.98, windKmh: 11, nightTempC: 2.2 },
-  { day: 20, dateLabel: 'Nov 20', regime: 'atlantic', regimeTitle: 'Brief Coastal Breeze', valleyFactor: 0.82, urbanFactor: 0.90, windKmh: 22, nightTempC: 6.5 },
-  { day: 21, dateLabel: 'Nov 21', regime: 'atlantic', regimeTitle: 'Moderate Southerly Drift', valleyFactor: 0.85, urbanFactor: 0.92, windKmh: 20, nightTempC: 6.0 },
-  { day: 22, dateLabel: 'Nov 22', regime: 'inversion', regimeTitle: 'High Pressure Ridge Rebuilds', valleyFactor: 1.28, urbanFactor: 1.01, windKmh: 9, nightTempC: 1.9 },
-  { day: 23, dateLabel: 'Nov 23', regime: 'frost', regimeTitle: 'Sharp Nocturnal Frost Lid', valleyFactor: 1.55, urbanFactor: 1.06, windKmh: 5, nightTempC: -1.0 },
-  { day: 24, dateLabel: 'Nov 24', regime: 'frost', regimeTitle: 'Severe Basin Smog Trapping', valleyFactor: 1.66, urbanFactor: 1.09, windKmh: 5, nightTempC: -1.5 },
-  { day: 25, dateLabel: 'Nov 25', regime: 'frost', regimeTitle: 'Sub-Zero Hearth Ignition Surge', valleyFactor: 1.75, urbanFactor: 1.11, windKmh: 4, nightTempC: -2.4 },
-  { day: 26, dateLabel: 'Nov 26', regime: 'frost', regimeTitle: 'Stagnant Inversion Ceiling', valleyFactor: 1.60, urbanFactor: 1.08, windKmh: 6, nightTempC: -1.1 },
-  { day: 27, dateLabel: 'Nov 27', regime: 'inversion', regimeTitle: 'Calm Cold River Basin Pooling', valleyFactor: 1.48, urbanFactor: 1.04, windKmh: 7, nightTempC: 0.2 },
-  { day: 28, dateLabel: 'Nov 28', regime: 'inversion', regimeTitle: 'Widespread Evening Turf Smoke', valleyFactor: 1.52, urbanFactor: 1.05, windKmh: 6, nightTempC: -0.3 },
-  { day: 29, dateLabel: 'Nov 29', regime: 'frost', regimeTitle: 'Late-Month Winter Freeze', valleyFactor: 1.64, urbanFactor: 1.08, windKmh: 5, nightTempC: -1.6 },
-  { day: 30, dateLabel: 'Nov 30', regime: 'frost', regimeTitle: '30-Day Cumulative Peak Burden', valleyFactor: 1.58, urbanFactor: 1.06, windKmh: 6, nightTempC: -0.8 },
+  { day: 1, regime: 'inversion', regimeTitle: 'Calm Anticyclone Onset', valleyWeight: 1.35, urbanWeight: 1.05, windKmh: 7, nightTempC: 1.5 },
+  { day: 2, regime: 'frost', regimeTitle: 'Severe Nocturnal Inversion Peak', valleyWeight: 1.95, urbanWeight: 1.12, windKmh: 4, nightTempC: -2.5 },
+  { day: 3, regime: 'frost', regimeTitle: 'Stagnant Valley Trapping', valleyWeight: 1.65, urbanWeight: 1.08, windKmh: 6, nightTempC: -1.2 },
+  { day: 4, regime: 'inversion', regimeTitle: 'High Pressure Thermal Lid', valleyWeight: 1.50, urbanWeight: 1.05, windKmh: 8, nightTempC: 0.5 },
+  { day: 5, regime: 'inversion', regimeTitle: 'Calm Evening Hearth Accumulation', valleyWeight: 1.42, urbanWeight: 1.02, windKmh: 9, nightTempC: 1.1 },
+  { day: 6, regime: 'inversion', regimeTitle: 'Lingering Mist & Cold Basin Air', valleyWeight: 1.30, urbanWeight: 1.00, windKmh: 11, nightTempC: 2.0 },
+  { day: 7, regime: 'atlantic', regimeTitle: 'Atlantic Westerly Breeze', valleyWeight: 0.45, urbanWeight: 0.55, windKmh: 28, nightTempC: 7.4 },
+  { day: 8, regime: 'atlantic', regimeTitle: 'Maritime Gale Dispersion', valleyWeight: 0.20, urbanWeight: 0.35, windKmh: 42, nightTempC: 8.8 },
+  { day: 9, regime: 'atlantic', regimeTitle: 'Clean Atlantic Airflow', valleyWeight: 0.25, urbanWeight: 0.40, windKmh: 38, nightTempC: 8.1 },
+  { day: 10, regime: 'atlantic', regimeTitle: 'Post-Frontal Clearing', valleyWeight: 0.40, urbanWeight: 0.50, windKmh: 24, nightTempC: 6.2 },
+  { day: 11, regime: 'atlantic', regimeTitle: 'Slackening Westerly Flow', valleyWeight: 0.65, urbanWeight: 0.70, windKmh: 18, nightTempC: 4.5 },
+  { day: 12, regime: 'inversion', regimeTitle: 'Clear Sky Radiational Cooling', valleyWeight: 1.25, urbanWeight: 1.00, windKmh: 9, nightTempC: 0.8 },
+  { day: 13, regime: 'frost', regimeTitle: 'Midland Frost & Hearth Surge', valleyWeight: 1.52, urbanWeight: 1.06, windKmh: 5, nightTempC: -2.2 },
+  { day: 14, regime: 'frost', regimeTitle: 'Deep Valley Temperature Inversion', valleyWeight: 1.68, urbanWeight: 1.10, windKmh: 4, nightTempC: -2.8 },
+  { day: 15, regime: 'frost', regimeTitle: 'Persistent Anticyclonic Dome', valleyWeight: 1.58, urbanWeight: 1.07, windKmh: 6, nightTempC: -1.9 },
+  { day: 16, regime: 'frost', regimeTitle: 'Freezing Fog & Trapped Soot', valleyWeight: 1.72, urbanWeight: 1.12, windKmh: 4, nightTempC: -3.1 },
+  { day: 17, regime: 'inversion', regimeTitle: 'Calm Boundary Layer Collapse', valleyWeight: 1.45, urbanWeight: 1.04, windKmh: 8, nightTempC: -0.4 },
+  { day: 18, regime: 'inversion', regimeTitle: 'Evening Solid-Fuel Peak', valleyWeight: 1.38, urbanWeight: 1.02, windKmh: 10, nightTempC: 0.4 },
+  { day: 19, regime: 'inversion', regimeTitle: 'Still Winter Evening Pooling', valleyWeight: 1.32, urbanWeight: 0.98, windKmh: 11, nightTempC: 1.2 },
+  { day: 20, regime: 'atlantic', regimeTitle: 'Brief Coastal Breeze', valleyWeight: 0.50, urbanWeight: 0.60, windKmh: 22, nightTempC: 5.5 },
+  { day: 21, regime: 'atlantic', regimeTitle: 'Moderate Southerly Drift', valleyWeight: 0.55, urbanWeight: 0.65, windKmh: 20, nightTempC: 5.0 },
+  { day: 22, regime: 'inversion', regimeTitle: 'High Pressure Ridge Rebuilds', valleyWeight: 1.28, urbanWeight: 1.01, windKmh: 9, nightTempC: 0.9 },
+  { day: 23, regime: 'frost', regimeTitle: 'Sharp Nocturnal Frost Lid', valleyWeight: 1.55, urbanWeight: 1.06, windKmh: 5, nightTempC: -2.0 },
+  { day: 24, regime: 'frost', regimeTitle: 'Severe Basin Smog Trapping', valleyWeight: 1.66, urbanWeight: 1.09, windKmh: 5, nightTempC: -2.5 },
+  { day: 25, regime: 'frost', regimeTitle: 'Sub-Zero Hearth Ignition Surge', valleyWeight: 1.75, urbanWeight: 1.11, windKmh: 4, nightTempC: -3.4 },
+  { day: 26, regime: 'frost', regimeTitle: 'Stagnant Inversion Ceiling', valleyWeight: 1.60, urbanWeight: 1.08, windKmh: 6, nightTempC: -2.1 },
+  { day: 27, regime: 'inversion', regimeTitle: 'Calm Cold River Basin Pooling', valleyWeight: 1.48, urbanWeight: 1.04, windKmh: 7, nightTempC: -0.8 },
+  { day: 28, regime: 'inversion', regimeTitle: 'Widespread Evening Turf Smoke', valleyWeight: 1.52, urbanWeight: 1.05, windKmh: 6, nightTempC: -1.3 },
+  { day: 29, regime: 'frost', regimeTitle: 'Late-Month Winter Freeze', valleyWeight: 1.64, urbanWeight: 1.08, windKmh: 5, nightTempC: -2.6 },
+  { day: 30, regime: 'frost', regimeTitle: '30-Day Cumulative Peak Burden', valleyWeight: 1.58, urbanWeight: 1.06, windKmh: 6, nightTempC: -1.8 },
 ];
 
-// Color scale for Cumulative Monthly WHO Breach Hours (0 to 220+ hours over 30 days)
+// Color scale for Cumulative Monthly WHO Breach Hours
 export const getCumulativeColor = (breachHours: number, cumDose: number) => {
-  if (breachHours <= 12 && cumDose < 3500) {
+  if (breachHours <= 15 && cumDose < 4000) {
     return { bg: '#10b981', glow: '#059669', label: 'Low Cumulative Load' };
   }
-  if (breachHours <= 30) {
+  if (breachHours <= 42) {
     return { bg: '#38bdf8', glow: '#0284c7', label: 'Baseline Urban Load' };
   }
-  if (breachHours <= 65) {
+  if (breachHours <= 85) {
     return { bg: '#fbbf24', glow: '#d97706', label: 'Moderate Accumulation' };
   }
-  if (breachHours <= 115) {
+  if (breachHours <= 135) {
     return { bg: '#f97316', glow: '#ea580c', label: 'High Hearth Burden' };
   }
-  if (breachHours <= 165) {
+  if (breachHours <= 185) {
     return { bg: '#f43f5e', glow: '#e11d48', label: 'Severe Monthly Breach' };
   }
   return { bg: '#d946ef', glow: '#a21caf', label: 'Extreme Valley Accumulation' };
@@ -125,25 +267,35 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
   selectedStationCode,
   onSelectStation,
 }) => {
-  const [currentDay, setCurrentDay] = useState<number>(30);
+  const [selectedPeriod, setSelectedPeriod] = useState<DatasetPeriodKey>('jan2026');
+  const periodConfig = DATASET_PERIODS[selectedPeriod];
+
+  const [currentDay, setCurrentDay] = useState<number>(periodConfig.totalDays);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [speed, setSpeed] = useState<number>(1);
   const [cinemaMode, setCinemaMode] = useState<boolean>(false);
   const [showGlobalCities, setShowGlobalCities] = useState<boolean>(true);
   const [hoveredCode, setHoveredCode] = useState<string | null>(null);
 
-  // Playback loop across Day 1 -> Day 30
+  // Keep currentDay within bounds when switching between 28-day Feb and 30-day months
+  const handleSelectPeriod = (key: DatasetPeriodKey) => {
+    setIsPlaying(false);
+    setSelectedPeriod(key);
+    setCurrentDay(DATASET_PERIODS[key].totalDays);
+  };
+
+  // Playback loop across Day 1 -> totalDays
   useEffect(() => {
     if (!isPlaying) return;
-    const ms = speed === 2 ? 260 : 480;
+    const ms = speed === 2 ? 250 : 460;
     const timer = setInterval(() => {
       setCurrentDay((prev) => {
-        if (prev >= 30) return 1;
+        if (prev >= periodConfig.totalDays) return 1;
         return prev + 1;
       });
     }, ms);
     return () => clearInterval(timer);
-  }, [isPlaying, speed]);
+  }, [isPlaying, speed, periodConfig.totalDays]);
 
   // Pre-build 32-county SVG paths
   const countyPaths = useMemo(() => {
@@ -177,11 +329,16 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
     });
   }, []);
 
-  // Precompute 30-day cumulative series for all 113 Irish stations + 4 Global Megacities
+  // Precompute cumulative series for all 113 Irish stations + 4 Global Megacities for the active period
   const cumulativeByDay = useMemo(() => {
-    const whoLimit = data.metadata.whoGuidelineDailyPm25; // 15.0
+    const totalDays = periodConfig.totalDays;
+    const activeSynoptic = SYNOPTIC_DAYS_TEMPLATE.slice(0, totalDays);
 
-    // Base daily profile for each Irish station from hourlySnapshots (hours 0..23)
+    // Sum of daily weights for normalization to exact measured EPA monthly totals
+    const totalValleyWeight = activeSynoptic.reduce((acc, s) => acc + s.valleyWeight, 0);
+    const totalUrbanWeight = activeSynoptic.reduce((acc, s) => acc + s.urbanWeight, 0);
+
+    // Base daily profile for each Irish station
     const stationHourlyMap: Record<string, number[]> = {};
     for (let h = 0; h < 24; h++) {
       const snap = data.hourlySnapshots[String(h)] || [];
@@ -190,10 +347,26 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
         stationHourlyMap[pt.code].push(pt.pm25);
       }
     }
-
-    // Also include global benchmarks hourly profiles
     for (const [gCode, gStation] of Object.entries(GLOBAL_BENCHMARKS)) {
       stationHourlyMap[gCode] = gStation.profile24h.map((p) => p.averagePm25);
+    }
+
+    // Determine target full-month WHO breach hours for every station
+    const fullMonthBreachTarget: Record<string, number> = {};
+    for (const st of data.allStations) {
+      if (periodConfig.targetBreaches[st.code] !== undefined) {
+        fullMonthBreachTarget[st.code] = periodConfig.targetBreaches[st.code];
+      } else {
+        const isDublin = st.name.includes('Dublin');
+        const hrs = stationHourlyMap[st.code] || [];
+        const baseDailyBreach = hrs.filter((v) => v > 15).length;
+        fullMonthBreachTarget[st.code] = isDublin
+          ? Math.round(Math.max(8, baseDailyBreach * 6 * periodConfig.urbanScale))
+          : Math.round(Math.min(240, Math.max(18, baseDailyBreach * 19 * periodConfig.valleyScale)));
+      }
+    }
+    for (const gCode of Object.keys(GLOBAL_BENCHMARKS)) {
+      fullMonthBreachTarget[gCode] = periodConfig.targetBreaches[gCode] ?? 30;
     }
 
     const daysMap: Record<
@@ -206,7 +379,6 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
           lon: number;
           cumDose: number;
           cumBreachHours: number;
-          eveningPeakMean: number;
           cigarettesEq: number;
         }[];
         byCode: Record<string, any>;
@@ -214,18 +386,18 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
     > = {};
 
     const runningDose: Record<string, number> = {};
-    const runningBreach: Record<string, number> = {};
+    const runningBreachFloat: Record<string, number> = {};
 
     for (const st of data.allStations) {
       runningDose[st.code] = 0;
-      runningBreach[st.code] = 0;
+      runningBreachFloat[st.code] = 0;
     }
     for (const gCode of Object.keys(GLOBAL_BENCHMARKS)) {
       runningDose[gCode] = 0;
-      runningBreach[gCode] = 0;
+      runningBreachFloat[gCode] = 0;
     }
 
-    for (const syn of NOVEMBER_SYNOPTIC_DAYS) {
+    for (const syn of activeSynoptic) {
       const d = syn.day;
       const dayList = [];
       const dayByCode: Record<string, any> = {};
@@ -240,37 +412,29 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
           st.code === 'EPA-91' ||
           st.code === 'AQG-23568';
 
-        let dayDose = 0;
-        let dayBreaches = 0;
+        const weightShare = isUrbanOrClean
+          ? syn.urbanWeight / totalUrbanWeight
+          : syn.valleyWeight / totalValleyWeight;
 
-        for (let h = 0; h < 24; h++) {
-          const baseVal = hours24[h] || 8;
-          const isEvening = h >= 17 || h <= 2;
-          const factor = isUrbanOrClean
-            ? syn.urbanFactor
-            : isEvening
-            ? syn.valleyFactor
-            : (syn.valleyFactor + 1) / 2;
+        const targetTotalBreach = fullMonthBreachTarget[st.code] || 20;
+        runningBreachFloat[st.code] += targetTotalBreach * weightShare;
 
-          const simVal = baseVal * factor;
-          dayDose += simVal;
-          if (simVal > whoLimit) {
-            dayBreaches += 1;
-          }
-        }
+        const dailyBaseSum = hours24.reduce((a, b) => a + b, 0);
+        const dayDose =
+          dailyBaseSum *
+          (isUrbanOrClean
+            ? syn.urbanWeight * periodConfig.urbanScale
+            : syn.valleyWeight * periodConfig.valleyScale * 0.72);
 
         runningDose[st.code] += dayDose;
-        runningBreach[st.code] += dayBreaches;
 
-        const evAvg = ((hours24[19] || 12) + (hours24[20] || 12) + (hours24[21] || 12)) / 3;
         const item = {
           code: st.code,
           name: st.name,
           lat: st.lat,
           lon: st.lon,
           cumDose: Math.round(runningDose[st.code]),
-          cumBreachHours: runningBreach[st.code],
-          eveningPeakMean: Math.round(evAvg * 10) / 10,
+          cumBreachHours: Math.round(runningBreachFloat[st.code]),
           cigarettesEq: Math.round((runningDose[st.code] / 528) * 10) / 10,
         };
         dayList.push(item);
@@ -280,20 +444,12 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
       // 2. Process Global Megacity Benchmarks
       for (const [gCode, gSt] of Object.entries(GLOBAL_BENCHMARKS)) {
         const hours24 = stationHourlyMap[gCode];
-        let dayDose = 0;
-        let dayBreaches = 0;
+        const weightShare = syn.urbanWeight / totalUrbanWeight;
+        const targetTotalBreach = fullMonthBreachTarget[gCode] || 30;
+        runningBreachFloat[gCode] += targetTotalBreach * weightShare;
 
-        for (let h = 0; h < 24; h++) {
-          const baseVal = hours24[h] || 10;
-          const simVal = baseVal * syn.urbanFactor;
-          dayDose += simVal;
-          if (simVal > whoLimit) {
-            dayBreaches += 1;
-          }
-        }
-
-        runningDose[gCode] += dayDose;
-        runningBreach[gCode] += dayBreaches;
+        const dailyBaseSum = hours24.reduce((a, b) => a + b, 0);
+        runningDose[gCode] += dailyBaseSum * syn.urbanWeight;
 
         dayByCode[gCode] = {
           code: gCode,
@@ -301,8 +457,7 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
           lat: gSt.lat,
           lon: gSt.lon,
           cumDose: Math.round(runningDose[gCode]),
-          cumBreachHours: runningBreach[gCode],
-          eveningPeakMean: gSt.profile24h[19]?.averagePm25 || 14,
+          cumBreachHours: Math.round(runningBreachFloat[gCode]),
           cigarettesEq: Math.round((runningDose[gCode] / 528) * 10) / 10,
           isGlobal: true,
           globalColor: gSt.color,
@@ -313,10 +468,15 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
     }
 
     return daysMap;
-  }, [data]);
+  }, [data, periodConfig]);
 
-  const currentSnapshot = cumulativeByDay[currentDay] || cumulativeByDay[30];
-  const currentSynoptic = NOVEMBER_SYNOPTIC_DAYS[currentDay - 1] || NOVEMBER_SYNOPTIC_DAYS[29];
+  const safeDay = Math.min(currentDay, periodConfig.totalDays);
+  const currentSnapshot = cumulativeByDay[safeDay] || cumulativeByDay[1];
+  const currentSynoptic = SYNOPTIC_DAYS_TEMPLATE[safeDay - 1] || SYNOPTIC_DAYS_TEMPLATE[0];
+  const currentDateLabel =
+    selectedPeriod === 'mar2026'
+      ? `Day ${safeDay} (Mar–Apr 2026)`
+      : `${periodConfig.monthPrefix} ${safeDay}, ${periodConfig.yearLabel}`;
 
   // Key benchmark stations for the animated Cumulative Bar Race
   const raceStations = useMemo(() => {
@@ -356,7 +516,7 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
     }[];
   }, [currentSnapshot, data.targetStations, showGlobalCities]);
 
-  // Helper to shade county polygons based on cumulative progression from Day 1 -> Day 30
+  // Helper to shade county polygons based on cumulative progression
   const getCountyCumulativeFill = (cx: number, cy: number, region: 'ROI' | 'NI') => {
     if (region === 'NI') return '#0c1322';
     let weightedBreach = 0;
@@ -373,11 +533,11 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
     }
 
     const estBreach = weightTotal > 0 ? weightedBreach / weightTotal : 5;
-    if (estBreach <= 12) return '#112233';
-    if (estBreach <= 30) return '#16293d';
-    if (estBreach <= 65) return '#2d261a';
-    if (estBreach <= 110) return '#3b1f18';
-    if (estBreach <= 155) return '#471627';
+    if (estBreach <= 15) return '#112233';
+    if (estBreach <= 40) return '#16293d';
+    if (estBreach <= 80) return '#2d261a';
+    if (estBreach <= 130) return '#3b1f18';
+    if (estBreach <= 175) return '#471627';
     return '#3f1242';
   };
 
@@ -388,7 +548,7 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
   const hoveredStation = hoveredCode ? currentSnapshot.byCode[hoveredCode] : null;
 
   const handleStartTimelapse = () => {
-    if (!isPlaying && currentDay === 30) {
+    if (!isPlaying && safeDay >= periodConfig.totalDays) {
       setCurrentDay(1);
     }
     setIsPlaying(!isPlaying);
@@ -403,32 +563,38 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
       }`}
     >
       <div className="max-w-7xl w-full mx-auto bg-slate-900/95 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-2xl">
-        {/* Top Banner: Title + Scrubber Controls + Cinema Toggle */}
+        {/* Top Banner: Dataset Period Selector + Play Timelapse Controls */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-800">
-          <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-fuchsia-500/15 text-fuchsia-300 border border-fuchsia-500/30">
-                <Calendar className="w-3.5 h-3.5" />
-                30-Day Cumulative Monthly Timelapse
+          <div className="space-y-1.5">
+            {/* Period Selector Pills */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1 flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5 text-fuchsia-400" />
+                <span>30-Day Dataset:</span>
               </span>
-              <span
-                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
-                  currentSynoptic.regime === 'atlantic'
-                    ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
-                    : 'bg-rose-500/15 text-rose-300 border-rose-500/30'
-                }`}
-              >
-                <Wind className="w-3.5 h-3.5" />
-                Day {currentDay} ({currentSynoptic.dateLabel}): {currentSynoptic.regimeTitle}
-              </span>
+              {(Object.keys(DATASET_PERIODS) as DatasetPeriodKey[]).map((k) => {
+                const p = DATASET_PERIODS[k];
+                const active = selectedPeriod === k;
+                return (
+                  <button
+                    key={k}
+                    onClick={() => handleSelectPeriod(k)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                      active
+                        ? 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/40 shadow-sm'
+                        : 'bg-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700'
+                    }`}
+                  >
+                    {p.shortTag}
+                  </button>
+                );
+              })}
             </div>
 
             <h2 className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
-              How 30 Nights of 7:00 PM "Stove Inversions" Outpollute London, New York &amp; Paris
+              {periodConfig.label}
             </h2>
-            <p className="text-xs text-slate-400">
-              Watch cumulative WHO breach hours (&gt;15 µg/m³) build up night after night in regional Irish river valleys compared against Dublin, London, and Manhattan.
-            </p>
+            <p className="text-xs text-slate-400">{periodConfig.subtitle}</p>
           </div>
 
           {/* Right Controls: Play 30-Day Timelapse + Speed + Cinema Frame */}
@@ -438,7 +604,7 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
                 setIsPlaying(false);
                 setCurrentDay(1);
               }}
-              title="Reset to Day 1 (Nov 1)"
+              title="Reset to Day 1"
               className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition cursor-pointer"
             >
               <RotateCcw className="w-4 h-4" />
@@ -460,7 +626,7 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
               ) : (
                 <>
                   <Play className="w-4 h-4 fill-current" />
-                  <span>PLAY 30-DAY TIMELAPSE</span>
+                  <span>PLAY {periodConfig.totalDays}-DAY TIMELAPSE</span>
                 </>
               )}
             </button>
@@ -491,7 +657,7 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
               flag: '🇮🇪',
               city: 'Ennis (Co. Clare)',
               pop: 'Pop. 27,000',
-              peak: '198.1 µg/m³',
+              peak: `${periodConfig.ennisPeak} µg/m³`,
               hrs: `${ennisStat?.cumBreachHours || 0}h >WHO`,
               badge: 'text-fuchsia-300 border-fuchsia-500/40 bg-fuchsia-500/10',
               valColor: 'text-fuchsia-400',
@@ -500,19 +666,19 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
               flag: '🇮🇪',
               city: 'Tralee (Co. Kerry)',
               pop: 'Pop. 26,000',
-              peak: '142.0 µg/m³',
+              peak: `${periodConfig.traleePeak} µg/m³`,
               hrs: `${currentSnapshot.byCode['EPA-71']?.cumBreachHours || 0}h >WHO`,
               badge: 'text-rose-300 border-rose-500/30 bg-rose-500/10',
               valColor: 'text-rose-400',
             },
             {
-              flag: '🇨🇳',
-              city: 'Beijing (Chaoyang)',
-              pop: 'Pop. 21.5M',
-              peak: '61.0 µg/m³',
-              hrs: `${currentSnapshot.byCode['GLOBAL-BJS']?.cumBreachHours || 0}h >WHO`,
-              badge: 'text-amber-300 border-amber-500/30 bg-slate-950',
-              valColor: 'text-amber-400',
+              flag: '🇮🇪',
+              city: 'Dublin (Phoenix Pk)',
+              pop: 'Pop. 1.45M',
+              peak: `${periodConfig.dublinPeak} µg/m³`,
+              hrs: `${dublinStat?.cumBreachHours || 0}h >WHO`,
+              badge: 'text-cyan-300 border-cyan-500/30 bg-slate-950',
+              valColor: 'text-cyan-400',
             },
             {
               flag: '🇫🇷',
@@ -567,69 +733,76 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
         {/* 30-Day Interactive Timeline Scrubber Bar */}
         <div className="my-4 bg-slate-950/90 border border-slate-800/90 rounded-xl p-3">
           <div className="flex items-center justify-between text-xs mb-1.5">
-            <div className="flex items-center gap-2 font-mono">
+            <div className="flex items-center gap-2 font-mono flex-wrap">
               <span className="px-2 py-0.5 rounded bg-orange-500/20 text-orange-300 font-bold border border-orange-500/30">
-                DAY {String(currentDay).padStart(2, '0')} / 30 ({currentSynoptic.dateLabel})
+                DAY {String(safeDay).padStart(2, '0')} / {periodConfig.totalDays} ({currentDateLabel})
+              </span>
+              <span className="text-slate-300 font-sans font-semibold text-xs">
+                {currentSynoptic.regimeTitle}
               </span>
               <span className="text-slate-400 text-[11px]">
-                Night Temp: <strong className="text-slate-200">{currentSynoptic.nightTempC}°C</strong> • Wind:{' '}
+                • Night: <strong className="text-slate-200">{currentSynoptic.nightTempC}°C</strong> • Wind:{' '}
                 <strong className="text-slate-200">{currentSynoptic.windKmh} km/h</strong>
               </span>
             </div>
             <div className="text-[11px] font-mono text-slate-400 hidden sm:block">
-              Cumulative Hours Monitored: <strong className="text-white">{currentDay * 24} hrs</strong>
+              Cumulative Window: <strong className="text-white">{safeDay * 24} hrs</strong>
             </div>
           </div>
 
           <input
             type="range"
             min="1"
-            max="30"
+            max={periodConfig.totalDays}
             step="1"
-            value={currentDay}
+            value={safeDay}
             onChange={(e) => setCurrentDay(parseInt(e.target.value, 10))}
             className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-fuchsia-500"
           />
 
           <div className="flex justify-between text-[10px] font-mono text-slate-500 mt-1 px-0.5">
-            <span>Nov 1 (Start)</span>
-            <span className="text-rose-400">Nov 2–6 (Inversion #1)</span>
-            <span className="text-emerald-400">Nov 8–11 (Atlantic Gale)</span>
-            <span className="text-fuchsia-400">Nov 13–18 (Frost Lid #2)</span>
-            <span className="text-rose-400">Nov 23–30 (Deep Freeze #3)</span>
+            <span>
+              {periodConfig.monthPrefix} 1 ({periodConfig.yearLabel})
+            </span>
+            <span className="text-rose-400">Days 2–6 (Inversion Dome #1)</span>
+            <span className="text-emerald-400">Days 7–11 (Atlantic Gale Clearing)</span>
+            <span className="text-fuchsia-400">Days 13–18 (Frost Lid #2)</span>
+            <span className="text-rose-400">
+              {periodConfig.monthPrefix} {periodConfig.totalDays} (Cumulative Total)
+            </span>
           </div>
         </div>
 
-        {/* Main 12-Column Summary Layout: Left 7 Cols = Ireland Cumulative Map, Right 5 Cols = Cumulative Bar Race & Staircase */}
+        {/* Main 12-Column Summary Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-          {/* LEFT: All-Island 30-Day Cumulative Map */}
+          {/* LEFT: All-Island Cumulative Map */}
           <div className="lg:col-span-7 bg-slate-950/85 border border-slate-800 rounded-2xl p-3 flex flex-col justify-between relative overflow-hidden">
             {/* Map Subheader & Cumulative Color Legend */}
             <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-800/80 z-10">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-white">
-                  Cumulative Soot Load (Day 1 &rarr; Day {currentDay})
+                  Cumulative Soot Load ({periodConfig.shortTag} • Day 1 &rarr; {safeDay})
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-2 text-[9.5px] font-mono">
                 <span className="text-slate-400">WHO Breach Hrs:</span>
                 <span className="flex items-center gap-1 text-slate-300">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>&le;12h
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>&le;15h
                 </span>
                 <span className="flex items-center gap-1 text-slate-300">
-                  <span className="w-2 h-2 rounded-full bg-sky-400"></span>&le;30h
+                  <span className="w-2 h-2 rounded-full bg-sky-400"></span>&le;42h
                 </span>
                 <span className="flex items-center gap-1 text-slate-300">
-                  <span className="w-2 h-2 rounded-full bg-amber-400"></span>30–65h
+                  <span className="w-2 h-2 rounded-full bg-amber-400"></span>42–85h
                 </span>
                 <span className="flex items-center gap-1 text-slate-300">
-                  <span className="w-2 h-2 rounded-full bg-orange-500"></span>65–115h
+                  <span className="w-2 h-2 rounded-full bg-orange-500"></span>85–135h
                 </span>
                 <span className="flex items-center gap-1 text-slate-300">
-                  <span className="w-2 h-2 rounded-full bg-rose-500"></span>115–165h
+                  <span className="w-2 h-2 rounded-full bg-rose-500"></span>135–185h
                 </span>
                 <span className="flex items-center gap-1 text-fuchsia-300 font-bold">
-                  <span className="w-2.5 h-2.5 rounded-full bg-fuchsia-500"></span>&gt;165h
+                  <span className="w-2.5 h-2.5 rounded-full bg-fuchsia-500"></span>&gt;185h
                 </span>
               </div>
             </div>
@@ -686,14 +859,14 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
                   ))}
                 </g>
 
-                {/* Cumulative Atmospheric Soot Plumes (grow as cumulative breach hours climb) */}
+                {/* Cumulative Atmospheric Soot Plumes */}
                 <g filter="url(#cumPlumeBlur)" className="pointer-events-none">
                   {currentSnapshot.stations.map((pt) => {
-                    if (pt.cumBreachHours < 8) return null;
+                    if (pt.cumBreachHours < 10) return null;
                     const { x, y } = project(pt.lat, pt.lon);
                     const color = getCumulativeColor(pt.cumBreachHours, pt.cumDose);
-                    const radius = Math.min(52, 10 + Math.sqrt(pt.cumBreachHours) * 2.8);
-                    const opacity = Math.min(0.7, 0.14 + (pt.cumBreachHours / 210) * 0.55);
+                    const radius = Math.min(54, 10 + Math.sqrt(pt.cumBreachHours) * 2.7);
+                    const opacity = Math.min(0.72, 0.14 + (pt.cumBreachHours / 230) * 0.56);
                     return (
                       <circle
                         key={`cum-plume-${pt.code}`}
@@ -713,7 +886,7 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
                     const { x, y } = project(pt.lat, pt.lon);
                     const color = getCumulativeColor(pt.cumBreachHours, pt.cumDose);
                     const isSelected = pt.code === selectedStationCode;
-                    const isSevere = pt.cumBreachHours >= 130;
+                    const isSevere = pt.cumBreachHours >= 140;
 
                     return (
                       <g
@@ -749,7 +922,7 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
                         <circle
                           cx={x}
                           cy={y}
-                          r={isSelected ? 5.8 : pt.cumBreachHours > 60 ? 4.5 : 3.2}
+                          r={isSelected ? 5.8 : pt.cumBreachHours > 70 ? 4.5 : 3.2}
                           fill={color.bg}
                           stroke={isSelected ? '#ffffff' : '#090d16'}
                           strokeWidth={isSelected ? 2 : 1}
@@ -857,8 +1030,9 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
             {/* Bottom Map Summary Pill */}
             <div className="pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-[11px]">
               <span className="text-slate-400">
-                By <strong className="text-white">{currentSynoptic.dateLabel}</strong>, Ennis has{' '}
+                By <strong className="text-white">{currentDateLabel}</strong>, Ennis has{' '}
                 <strong className="text-fuchsia-400 font-mono">{ennisStat?.cumBreachHours || 0}h &gt;WHO</strong> vs{' '}
+                <strong className="text-cyan-400 font-mono">{dublinStat?.cumBreachHours || 0}h</strong> in Dublin,{' '}
                 <strong className="text-sky-400 font-mono">{londonStat?.cumBreachHours || 0}h</strong> in London &amp;{' '}
                 <strong className="text-emerald-400 font-mono">{nycStat?.cumBreachHours || 0}h</strong> in NYC.
               </span>
@@ -868,14 +1042,14 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
 
           {/* RIGHT: Cumulative Leaderboard Bar Race + 30-Day Staircase Curve */}
           <div className="lg:col-span-5 flex flex-col justify-between gap-4">
-            {/* Panel 1: 30-Day Cumulative Exposure Leaderboard (Bar Race) */}
+            {/* Panel 1: Cumulative Exposure Leaderboard (Bar Race) */}
             <div className="bg-slate-950/85 border border-slate-800 rounded-2xl p-4 flex-1 flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-800">
                   <div>
                     <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
                       <Flame className="w-4 h-4 text-orange-400" />
-                      <span>Cumulative Exposure Race (Day 1 &rarr; {currentDay})</span>
+                      <span>Cumulative Exposure Race ({periodConfig.shortTag})</span>
                     </h3>
                     <p className="text-[11px] text-slate-400">
                       Regional Irish towns vs Global Megacities (hours &gt; WHO 15 µg/m³)
@@ -897,7 +1071,7 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
                 {/* Animated Horizontal Bars */}
                 <div className="mt-3 space-y-2">
                   {raceStations.map((st) => {
-                    const maxPossibleBreach = 210;
+                    const maxPossibleBreach = 250;
                     const widthPct = Math.min(100, Math.max(4, (st.cumBreachHours / maxPossibleBreach) * 100));
                     const color = getCumulativeColor(st.cumBreachHours, st.cumDose);
                     const barColor = st.customColor || (st.isBaseline ? '#38bdf8' : color.bg);
@@ -954,13 +1128,13 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
               </p>
             </div>
 
-            {/* Panel 2: 30-Day Cumulative Divergence Curve (Ennis vs London, NYC & Dublin) */}
+            {/* Panel 2: Cumulative Divergence Curve */}
             <div className="bg-slate-950/85 border border-slate-800 rounded-2xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <div>
                   <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
                     <TrendingUp className="w-3.5 h-3.5 text-fuchsia-400" />
-                    <span>30-Day Cumulative WHO Breach Trajectory</span>
+                    <span>Cumulative WHO Breach Trajectory ({periodConfig.shortTag})</span>
                   </h3>
                   <p className="text-[10px] text-slate-400">
                     Ennis &amp; Tralee vs. London, New York City &amp; Dublin
@@ -970,7 +1144,7 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
                   <span className="text-xs font-extrabold text-fuchsia-400">
                     {ennisStat && londonStat && londonStat.cumBreachHours > 0
                       ? `${(ennisStat.cumBreachHours / londonStat.cumBreachHours).toFixed(1)}×`
-                      : '5.5×'}{' '}
+                      : '6.3×'}{' '}
                     London
                   </span>
                 </div>
@@ -984,9 +1158,10 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
                 const PR = 14;
                 const PT = 12;
                 const PB = 22;
-                const maxHrs = 220;
+                const maxHrs = 255;
+                const totD = periodConfig.totalDays;
 
-                const getX = (day: number) => PL + ((day - 1) / 29) * (W - PL - PR);
+                const getX = (day: number) => PL + ((day - 1) / (totD - 1)) * (W - PL - PR);
                 const getY = (hrs: number) => H - PB - (hrs / maxHrs) * (H - PT - PB);
 
                 const ennisPts: string[] = [];
@@ -995,7 +1170,7 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
                 const nycPts: string[] = [];
                 const dublinPts: string[] = [];
 
-                for (let d = 1; d <= currentDay; d++) {
+                for (let d = 1; d <= safeDay; d++) {
                   const snap = cumulativeByDay[d];
                   if (!snap) continue;
                   const x = getX(d);
@@ -1009,7 +1184,7 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
                 return (
                   <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto select-none">
                     {/* Grid lines */}
-                    {[0, 100, 200].map((val) => (
+                    {[0, 125, 250].map((val) => (
                       <g key={val}>
                         <line
                           x1={PL}
@@ -1031,7 +1206,7 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
                     ))}
 
                     {/* X-axis day ticks */}
-                    {[1, 10, 20, 30].map((d) => (
+                    {[1, 10, 20, totD].map((d) => (
                       <text
                         key={d}
                         x={getX(d)}
@@ -1039,13 +1214,13 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
                         textAnchor="middle"
                         className="fill-slate-500 text-[9px] font-mono"
                       >
-                        Nov {d}
+                        {periodConfig.monthPrefix} {d}
                       </text>
                     ))}
 
-                    {/* Full 30-day ghost path */}
+                    {/* Full period ghost path */}
                     <path
-                      d={Array.from({ length: 30 }, (_, i) => {
+                      d={Array.from({ length: totD }, (_, i) => {
                         const d = i + 1;
                         return `${d === 1 ? 'M' : 'L'}${getX(d)},${getY(
                           cumulativeByDay[d]?.byCode['EPA-25']?.cumBreachHours || 0
@@ -1059,7 +1234,7 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
                     />
 
                     {/* Active progressive paths */}
-                    <path d={dublinPts.join(' ')} fill="none" stroke="#64748b" strokeWidth="1.6" strokeDasharray="2 2" />
+                    <path d={dublinPts.join(' ')} fill="none" stroke="#22d3ee" strokeWidth="1.6" strokeDasharray="2 2" />
                     <path d={nycPts.join(' ')} fill="none" stroke="#10b981" strokeWidth="2" />
                     <path d={londonPts.join(' ')} fill="none" stroke="#38bdf8" strokeWidth="2.2" />
                     <path d={traleePts.join(' ')} fill="none" stroke="#f97316" strokeWidth="2.2" />
@@ -1067,7 +1242,7 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
 
                     {/* Current Day Playhead Dots */}
                     <circle
-                      cx={getX(currentDay)}
+                      cx={getX(safeDay)}
                       cy={getY(ennisStat?.cumBreachHours || 0)}
                       r="4.5"
                       fill="#d946ef"
@@ -1075,7 +1250,7 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
                       strokeWidth="1.5"
                     />
                     <circle
-                      cx={getX(currentDay)}
+                      cx={getX(safeDay)}
                       cy={getY(londonStat?.cumBreachHours || 0)}
                       r="3.8"
                       fill="#38bdf8"
@@ -1083,7 +1258,7 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
                       strokeWidth="1.5"
                     />
                     <circle
-                      cx={getX(currentDay)}
+                      cx={getX(safeDay)}
                       cy={getY(nycStat?.cumBreachHours || 0)}
                       r="3.5"
                       fill="#10b981"
@@ -1108,8 +1283,8 @@ export const MonthlyCumulativeMap: React.FC<MonthlyCumulativeMapProps> = ({
                   <span className="flex items-center gap-1 text-emerald-300 font-semibold">
                     <span className="w-2.5 h-1 rounded bg-emerald-400"></span>🇺🇸 NYC
                   </span>
-                  <span className="flex items-center gap-1 text-slate-400">
-                    <span className="w-2.5 h-0.5 border-b border-dashed border-slate-400"></span>🇮🇪 Dublin
+                  <span className="flex items-center gap-1 text-cyan-300">
+                    <span className="w-2.5 h-0.5 border-b border-dashed border-cyan-400"></span>🇮🇪 Dublin
                   </span>
                 </div>
               </div>
